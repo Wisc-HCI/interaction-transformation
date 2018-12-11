@@ -1,4 +1,5 @@
 import sys
+import os
 from PyQt5.QtCore import QSize, QRect, Qt, QCoreApplication, QUrl
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QFrame, QScrollArea, QSlider, QComboBox, QGroupBox, QProgressBar, QPushButton, QListWidget, QListWidgetItem, QMainWindow, QAction, QSpinBox, QCheckBox
 from PyQt5 import QtGui
@@ -35,7 +36,7 @@ class App(QMainWindow):
         self.json_exp.export_from_object(self.TS, st_reachables)
 
         # initialize the controller
-        self.adapter = Controller(TS, sys.argv[1])
+        self.adapter = Controller(self.TS, sys.argv[1])
 
         # show the UI
         self.initUI()
@@ -107,7 +108,7 @@ class App(QMainWindow):
         self.distance_window.update_graph([])
 
     def load_graph(self):
-        url = QUrl.fromLocalFile("/Users/david/Documents/UW_Research/Repair/repair_algorithms/d3js/example2.html")
+        url = QUrl.fromLocalFile("{}/d3js/example2.html".format(os.getcwd()))
         self.webView.load(url)
 
     def make_dimension_file(self):

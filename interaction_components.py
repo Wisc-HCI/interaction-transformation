@@ -46,6 +46,8 @@ class Frequencies:
             for inp in inputs.alphabet:
                 self.freqs[out][inp] = 1
 
+        print(self.freqs)
+
     def calculate_freqs(self, trajs):
 
         for traj in trajs:

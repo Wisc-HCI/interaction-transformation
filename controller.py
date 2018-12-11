@@ -3,6 +3,7 @@ import threading
 from interaction_components import *
 from mcmc_repair import *
 from verification.prism_util import *
+from trace_generator import *
 
 class Controller:
 
@@ -30,6 +31,7 @@ class Controller:
 
         self.prisms[0].split_property_file("interaction.props", int(num_processes))
 
+        '''
         traj1 = Trajectory([(HumanInput("Ready"),Microinteraction("Wait",0)),
                             (HumanInput("Ignore"),Microinteraction("Wait",0)),
                             (HumanInput("Ready"),Microinteraction("Greeter",0)),
@@ -69,6 +71,7 @@ class Controller:
                             (HumanInput("Ignore"),Microinteraction("Wait", 1)),
                             (HumanInput("Ignore"),Microinteraction("Remark", -1)),
                             (HumanInput("Ignore"),Microinteraction("Answer", 1))], 0.4)
+        '''
 
 
         '''
@@ -100,7 +103,9 @@ class Controller:
         self.trajs = [traj1,traj2,traj3,traj4,traj5,traj6,traj7,traj8]
         '''
 
-        self.trajs = [traj1,traj2,traj3,traj4,traj5,traj6]
+        '''self.trajs = [traj1,traj2,traj3,traj4,traj5,traj6]'''
+        tracegen = TraceGenerator(self.TS)
+        self.trajs = tracegen.get_trajectories(100)
         self.freqs.calculate_freqs(self.trajs)
         self.freqs.calculate_probabilities(self.inputs, self.outputs)
 
