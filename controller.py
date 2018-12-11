@@ -111,7 +111,7 @@ class Controller:
 
     def mcmc_adapt(self, TS, micro_selection, reward_window, progress_window, cost_window, prop_window, distance_window):
         mcmc = MCMCAdapt(TS, micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.prisms, self.prism_converter)
-        return mcmc.adapt(0.5, reward_window, progress_window, cost_window, prop_window, distance_window)
+        return mcmc.adapt(0.1, reward_window, progress_window, cost_window, prop_window, distance_window)
 
     def z3_adapt(self):
         solver = Solver(self.trajs, InputAlphabet(), OutputAlphabet())
