@@ -1,0 +1,7 @@
+#!/bin/bash
+
+javac -cp "/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/colt.jar:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/jhoafparser.jar:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/pepa.zip:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/prism.jar" /Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/RunPrism.java
+
+export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib
+
+/Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home/bin/java -Djava.library.path=/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib -Dfile.encoding=UTF-8 -classpath "/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/colt.jar:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/jhoafparser.jar:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/pepa.zip:/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/prism-4.4-osx64/lib/prism.jar" RunPrism $1

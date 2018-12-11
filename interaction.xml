@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nta>
+	<!-- The human states and their weights -->
+	<hstates>
+		<attribute name="readiness">
+			<state name="ready" type="pos" weight="1.0" p="0.1"/>
+			<state name="unready" type="zero" weight="1.0" p="0.9"/>
+		</attribute>
+		<attribute name="politeness">
+			<state name="polite" type="pos" weight="1.0" p="0.9"/>
+			<state name="rude" type="zero" weight="1.0" p="0.1"/>
+		</attribute>
+		<attribute name="distancing">
+			<state name="normal" type="pos" weight="1.0" p="0.9"/>
+			<state name="large" type="zero" weight="1.0" p="0.1"/>
+		</attribute>
+	</hstates>
+
+	<mstates>
+		<attribute name="speech_interactivity">
+			<state name="true"/>
+			<state name="false"/>
+		</attribute>
+		<attribute name="touch_interactivity">
+			<state name="true"/>
+			<state name="false"/>
+		</attribute>
+		<attribute name="robot_speaks">
+			<state name="true"/>
+			<state name="false"/>
+		</attribute>
+	</mstates>
+
+	<p_ignore>
+		<m_combo>_robot_speaks-true_speech_interactivity-true_touch_interactivity-true</m_combo>
+	</p_ignore>
+	<p_ignore>
+		<m_combo>_robot_speaks-false_speech_interactivity-true_touch_interactivity-false</m_combo>
+	</p_ignore>
+	<p_ignore>
+		<m_combo>_robot_speaks-false_speech_interactivity-true_touch_interactivity-true</m_combo>
+		<h_source>sreadiness-ready</h_source>
+	</p_ignore>
+	<p_ignore>
+		<m_combo>_robot_speaks-false_speech_interactivity-false_touch_interactivity-true</m_combo>
+	</p_ignore>
+	<p_ignore>
+		<m_combo>_robot_speaks-true_speech_interactivity-false_touch_interactivity-false</m_combo>
+		<h_source>sreadiness-unready</h_source>
+	</p_ignore>
+
+	<name>example6</name>
+
+	<group id="10" init="true" final="false" x="182.0" y="134.0">
+		<name>Begin</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>true</touch_interactivity>
+		<robot_speaks>false</robot_speaks>
+		<micro>
+			<name>Wait</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Waits for people to arrive.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="0" init="false" final="false" x="182.0" y="134.0">
+		<name>Wait_For_People</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>true</touch_interactivity>
+		<robot_speaks>false</robot_speaks>
+		<micro>
+			<name>Wait</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Waits for people to arrive.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="1" init="false" final="false" x="182.0" y="134.0">
+		<name>Greet_People</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Greeter</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>Hello! Welcome to the mueseum of natural history. Ready to begin?</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="2" init="false" final="false" x="182.0" y="134.0">
+		<name>Topic_1</name>
+		<speech_interactivity>false</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Robot says a monologue about the exhibit.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="3" init="false" final="false" x="182.0" y="134.0">
+		<name>Topic_2</name>
+		<speech_interactivity>false</speech_interactivity>
+		<touch_interactivity>true</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Robot provides a touch-interactive monologue about the exhibit.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="4" init="false" final="false" x="182.0" y="134.0">
+		<name>Topic_3</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Robot provides a speech-interactive session about the exhibit.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="5" init="false" final="false" x="182.0" y="134.0">
+		<name>All_Topics</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Answer</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>I can answer any questions you have about the exhibit right now.</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="6" init="false" final="false" x="182.0" y="134.0">
+		<name>Initiate_Escort</name>
+		<speech_interactivity>false</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>Follow me to the next exhibit!</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="7" init="false" final="false" x="182.0" y="134.0">
+		<name>Move</name>
+		<speech_interactivity>false</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>false</robot_speaks>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Moves silently to the next exhibit.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="8" init="false" final="false" x="182.0" y="134.0">
+		<name>QA_While_Move</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Answer</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>I can answer any questions that you have while moving to the next exhibit! (Moves to the next exhibit.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<group id="9" init="false" final="true" x="182.0" y="134.0">
+		<name>Wait_For_Next_People</name>
+		<speech_interactivity>true</speech_interactivity>
+		<touch_interactivity>false</touch_interactivity>
+		<robot_speaks>true</robot_speaks>
+		<micro>
+			<name>Wait</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+		<rtranscript>
+			<robot_speaks>(Waits for people to arrive.)</robot_speaks>
+		</rtranscript>
+	</group>
+
+	<transition>
+		<source ref="10"/>
+		<target ref="0"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="10"/>
+		<target ref="1"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="0"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="1"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="0"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="1"/>
+		<target ref="2"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="2"/>
+		<target ref="3"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="9"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="4"/>
+		<target ref="6"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="6"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="5"/>
+		<target ref="9"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="7"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="6"/>
+		<target ref="7"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="7"/>
+		<target ref="9"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="7"/>
+		<target ref="2"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="8"/>
+		<target ref="9"/>
+		<guard condition="human_ignore"/>
+	</transition>
+	
+	<transition>
+		<source ref="8"/>
+		<target ref="2"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<design>Delivery</design>
+</nta>

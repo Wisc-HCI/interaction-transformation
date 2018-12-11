@@ -1,0 +1,1 @@
+filter(forall, P>=1 [(glob=false)=>(X X X glob=true)], s=0);

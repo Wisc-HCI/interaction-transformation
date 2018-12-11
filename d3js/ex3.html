@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  cursor: pointer;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  font: 10px sans-serif;
+}
+
+.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 20, right: 120, bottom: 20, left: 120},
+    width = 960 - margin.right - margin.left,
+    height = 800 - margin.top - margin.bottom;
+
+var i = 0,
+    duration = 750,
+    root;
+
+var tree = d3.layout.tree()
+    .size([height, width]);
+
+var diagonal = d3.svg.diagonal()
+    .projection(function(d) { return [d.y, d.x]; });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.right + margin.left)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json("root.json", function(error, Start) {
+  d3.json("children.json", function(nodes) {
+    //console.log(nodes)
+    if (error) throw error;
+
+    root = Start;
+    root.x0 = height / 2;
+    root.y0 = 0;
+
+    // add the children from children.json to root
+    var max_depth = 4
+    node_count = 1
+    var addChildren = function(depth, currNode) {
+      var currNodeID = currNode["real_id"]
+      if (depth >= max_depth || !(currNodeID in nodes)) {
+        //console.log(currNode.name)
+        //console.log(currNodeID)
+        //console.log(depth >= max_depth)
+        //console.log(!(currNodeID in nodes))
+        return;
+      }
+      else {
+        var childrenList = nodes[currNodeID];
+        //console.log(childrenList.length)
+        if (!("children" in currNode)) {
+            currNode["children"] = []
+        }
+        for (var i = 0, count = childrenList.length; i<count; i++) {
+          //console.log(childrenList[i])
+          var newNode = {"name": childrenList[i]["name"], "real_id": childrenList[i]["real_id"], "parent": currNode}
+          //console.log(newNode)
+          node_count += 1
+          currNode["children"].push(newNode)
+          var added_depth = depth+1
+          addChildren(added_depth, newNode)
+        }
+      }
+    }
+
+    addChildren(1, root.children[0])
+
+    function collapse(d) {
+      if (d.children) {
+        d._children = d.children;
+        d._children.forEach(collapse);
+        d.children = null;
+      }
+    }
+
+
+    root.children.forEach(collapse);
+    update(root);
+    //console.log(root)
+  });
+});
+
+d3.select(self.frameElement).style("height", "800px");
+
+function update(source) {
+
+  // Compute the new tree layout.
+  //console.log(tree)
+  var nodes = tree.nodes(root).reverse(),
+      links = tree.links(nodes);
+
+  // Normalize for fixed-depth.
+  nodes.forEach(function(d) { d.y = d.depth * 180; });
+
+  // Update the nodes…
+  var node = svg.selectAll("g.node")
+      .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+  // Enter any new nodes at the parent's previous position.
+  var nodeEnter = node.enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+      .on("click", click);
+    //console.log(nodeEnter)
+
+  nodeEnter.append("circle")
+      .attr("r", 1e-6)
+      .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+  nodeEnter.append("text")
+      .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+      .attr("dy", ".35em")
+      .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+      .text(function(d) { return d.name; })
+      .style("fill-opacity", 1e-6);
+
+  // Transition nodes to their new position.
+  var nodeUpdate = node.transition()
+      .duration(duration)
+      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+  nodeUpdate.select("circle")
+      .attr("r", 4.5)
+      .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+  nodeUpdate.select("text")
+      .style("fill-opacity", 1);
+
+  // Transition exiting nodes to the parent's new position.
+  var nodeExit = node.exit().transition()
+      .duration(duration)
+      .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+      .remove();
+
+  nodeExit.select("circle")
+      .attr("r", 1e-6);
+
+  nodeExit.select("text")
+      .style("fill-opacity", 1e-6);
+
+  // Update the links…
+  var link = svg.selectAll("path.link")
+      .data(links, function(d) { return d.target.id; });
+
+  linkEnter = link.enter()
+  linkEnter.append("text")
+    .attr("font-family", "Arial, Helvetica, sans-serif")
+    .attr("fill", "Black")
+    .style("font", "normal 12px Arial")
+    .attr("transform", function(d) {
+        return "translate(" +
+            ((d.source.y + d.target.y)/2) + "," + 
+            ((d.source.x + d.target.x)/2) + ")";
+    })   
+    .attr("dy", ".35em")
+    .attr("text-anchor", "middle")
+    .text(function(d) {
+        //console.log(d);
+         return "hi";
+    });
+
+  // Enter any new links at the parent's previous position.
+  linkEnter.insert("path", "g")
+      .attr("class", "link")
+      .attr("d", function(d) {
+        var o = {x: source.x0, y: source.y0};
+        return diagonal({source: o, target: o});
+      });
+console.log("linkEnter:");
+console.log(linkEnter); 
+  /*
+  var labelText = svg.selectAll("g.linklabelholder").data(links);
+  labelText.enter().append("g").attr("class", "linklabelholder")
+    .append("text")
+    .attr("class","linkLabel")
+    .attr("dx",20)
+    .attr("dy",0)
+    .attr("text-anchor", "middle")
+      //.style("fill","red")
+      //.append("textPath")
+      //.attr("xlink:href",function(d,i) { return "#linkId_" + i;})
+    .text(function(d) {
+      console.log(d)
+      //if (d.source == source) {
+      //  console.log(d);
+      //  return d.source.name + "-" + d.target.name;
+      //}
+    });
+
+  labelText.attr("transform", 
+    function(d) { return "translate(" + (d.source.y + (d.target.y - d.source.y) * 0.5) + "," + (d.source.x + (d.target.x - d.source.x) * 0.5) + ")";}
+  );
+  */
+
+  /*
+  link.append("text")
+    .attr("font-family", "Arial, Helvetica, sans-serif")
+    .attr("fill", "Black")
+    .style("font", "normal 12px Arial")
+    .attr("transform", function(d) {
+        return "translate(" +
+            ((d.source.y + d.target.y)/2) + "," + 
+            ((d.source.x + d.target.x)/2) + ")";
+    })   
+    .attr("dy", ".35em")
+    .attr("text-anchor", "middle")
+    .text(function(d) {
+        console.log(d);
+         return "hi";
+    });
+  */
+
+  // Transition links to their new position.
+  link.transition()
+      .duration(duration)
+      .attr("d", diagonal);
+
+  // Transition exiting nodes to the parent's new position.
+  var linkExit = link.exit().transition()
+  //linkExit.transition()
+      .duration(duration)
+      .attr("d", function(d) {
+        var o = {x: source.x, y: source.y};
+        return diagonal({source: o, target: o});
+      })
+      //.attr("d").select("text").remove()
+      .remove();
+
+  console.log(linkExit)
+
+  linkExit.select("text")
+    .style("fill-opacity", 1e-6);
+
+  //linkExit.select("text").remove()
+  //linkExit.select("text")
+  //    .style("fill-opacity", 1e-6);
+
+  // Stash the old positions for transition.
+  nodes.forEach(function(d) {
+    d.x0 = d.x;
+    d.y0 = d.y;
+  });
+}
+
+// Toggle children on click.
+function click(d) {
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else {
+    d.children = d._children;
+    d._children = null;
+  }
+  update(d);
+  //console.log(root)
+}
+
+</script>
