@@ -81,7 +81,9 @@ public class RunPrism {
 								// loop through and check properties
 								String property = "";
 								while (true) {
+									System.out.println("reading a property (" + Integer.parseInt(args[0]) + ")");
 									property = stdIn.readLine();
+									System.out.println("read property " + property + "(" + Integer.parseInt(args[0]) + ")");
 									if (property.equals("EOP"))
 										break;
 									else if (property.contains("ENGINE")) {

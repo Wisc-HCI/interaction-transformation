@@ -17,9 +17,15 @@ class PlotWindow(QLabel):
 
     def initUI(self):
         self.setFrameShape(QFrame.Box)
-        self.m = Plotter(parent=self, width=4, height=2.5)
+        #self.m = Plotter(parent=self, width=self.width, height=self.height)
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.m.setGeometry(10,10,self.width-20,self.height-20)
+        self.m = Plotter(parent=self, width=self.frameGeometry().width(), height=self.frameGeometry().height())
+        #self.m.setGeometry(0,0,self.width,self.height)
+        #self.init_plot()
+
+    def updatePlotGeometry(self):
+        self.m.setGeometry(0,0,self.frameGeometry().width(),self.frameGeometry().height())
+        self.m.update_geometry(self.frameGeometry().width(),self.frameGeometry().height())
         self.init_plot()
 
     def set_title(self, title):

@@ -8,11 +8,15 @@ class Plotter(FigureCanvas):
 
 	def __init__(self, parent=None, width=5, height=4, dpi=100):
 		plt.rcParams.update({'font.size': 5})
-		fig = Figure(figsize=(width-width/10, height-height/10), dpi=dpi)
-		self.axes = fig.add_subplot(111)
-
-		FigureCanvas.__init__(self, fig)
+		plt.tight_layout()
+		self.fig = Figure(figsize=(width/100.0, height/100.0), dpi=dpi)
+		FigureCanvas.__init__(self, self.fig)
 		self.setParent(parent)
+		self.update_geometry(width,height)
+
+	def update_geometry(self, width, height):
+		self.fig.set_size_inches(width/100.0, height/100.0)
+		self.axes = self.fig.add_subplot(111)
 
 		FigureCanvas.setSizePolicy(self,
 				QSizePolicy.Expanding,

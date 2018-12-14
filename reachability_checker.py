@@ -28,16 +28,12 @@ class ReachabilityChecker:
             setup_constraints = And(setup_constraints, f_M(self.outputs[state.name]) == self.outputs[state.name])
 
         # set up f_T
-        print("GOOD TRANSITIONS:")
         for source,temp in self.TS.transitions.items():
             for target,conditions in temp.items():
                 for trans in conditions:
-                    print(trans)
                     setup_constraints = And(setup_constraints, f_T(self.outputs[trans.source.name], self.inputs[trans.condition]) == self.outputs[trans.target.name])
 
-        print("REMOVED TRANSITIONS:")
         for trans in self.removed_transitions:
-            print(trans)
             setup_constraints = And(setup_constraints, f_T(self.outputs[trans.source.name], self.inputs[trans.condition])==-1)
 
         return setup_constraints
@@ -53,27 +49,8 @@ class ReachabilityChecker:
         # n is the number of states in the interaction
         states = self.TS.states
         n = len(self.TS.states)
-        print("n={}".format(n))
 
         setup_constraints = self.setup(f_T, f_M, n)
-
-        s = Solver()
-        s.add(And(setup_constraints))
-        result = s.check()
-
-        #if state.name == "Begin":
-        #    print(state.id)
-            #m=s.model()
-            #print(m)
-        #print(traj_constraint)
-        #print(result)
-
-        if result == sat:
-            print("satisfied")
-            return True
-        else:
-            print("not satisfied")
-            return False
 
         sts = [Int("st_{}".format(i)) for i in range(2*n)]
 

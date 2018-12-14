@@ -9,6 +9,7 @@ class PathTraversal:
 
         sats = []
         probs = []
+        trajectory_status = {}
         for traj in self.trajectories:
             vect = traj.vect
 
@@ -17,6 +18,7 @@ class PathTraversal:
             if vect[0][1].type != self.TS.init.micros[0]["name"]:
                 #print("unsat -- init")
                 sat = False
+                trajectory_status[traj] = 0
                 continue
 
             curr_st = self.TS.init
@@ -35,14 +37,16 @@ class PathTraversal:
                 if not path_exists:
                     #print("unsat")
                     sat = False
+                    trajectory_status[traj] = 0
                     break
                 else:
                     curr_st = path_trans.target
 
             if sat:
                 #print("sat")
+                trajectory_status[traj] = traj.reward
                 sats.append(traj.reward)
                 probs.append(probability)
 
         #exit(0)
-        return sats, probs
+        return sats, probs, trajectory_status

@@ -36,7 +36,7 @@ class Transition(object):
         return Transition(self.source_id, self.target_id, self.condition)
 
     def __str__(self):
-        return "{} -> {}, ({} - {})".format(self.source_id, self.target_id, self.source, self.target)
+        return "{} --{}--> {}, ({} - {})".format(self.source_id, self.condition, self.target_id, self.source, self.target)
 
 class TS(object):
 

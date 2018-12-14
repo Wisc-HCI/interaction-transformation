@@ -7,16 +7,20 @@ from state_machine import *
 from path_traversal import *
 from bmc import *
 from reachability_checker import *
+from mod_tracker import *
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, prism, prism_converter):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, prism, prism_converter, update_UI):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
         self.inputs = inputs
         self.outputs = outputs
         self.micro_selection = micro_selection
+        self.update_UI = update_UI
+
+        self.mod_limit = int(round(0.15*(2*len(self.TS.states))))
 
         self.prism = prism
         self.prism_converter = prism_converter
@@ -26,7 +30,7 @@ class MCMCAdapt:
 
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
-        print(TS)
+        #print(TS)
         #print(TS.transitions)
         SMUtil().build(TS.transitions, TS.states)
 
@@ -65,12 +69,19 @@ class MCMCAdapt:
         distance = self.TS.get_distance(TS)
         self.prism_converter.make_PRISM_TS(TS, "ts")
         #_,_,sat_ratio,num_props,num_satisfied = self.prism.check("ts.pm", "interaction.props")
-        sat_ratio, num_props, num_satisfied = self.check_properties()
+        #sat_ratio, num_props, num_satisfied = self.check_properties()
+        sat_ratio = 1
+        num_props = 1
+        num_satisfied = 1
         path_traversal = PathTraversal(TS, self.trajs, self.freqs)
-        unweighted_rew_vect, probs_vect = path_traversal.check()
-        reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
+        unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
+        #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
+        reward_vect = unweighted_rew_vect
         total_reward = sum(reward_vect)
         precost = self.get_cost(reward_vect, num_props, num_satisfied, distance)
+
+        # set up the modification tracker dataset
+        mod_tracker = ModificationTracker(TS,self.inputs)
 
         rewards = []
         progress = []
@@ -79,27 +90,46 @@ class MCMCAdapt:
         distances = []
         accept_counter = 0
         reject_counter = 0
-        best_design = [TS.copy(),sum(reward_vect)]
-        start_time = time.time()
+        best_design = [TS.copy(),[trans for trans in removed_transitions],sum(reward_vect), traj_status]
+        #start_time = time.time()
+
         #for i in range(1, num_itr+1):
         i=0
         while True:
 
             rewards.append(sum(reward_vect))
-            progress.append(best_design[1])
+            progress.append(best_design[2])
             cost.append(precost)
             props.append(sat_ratio)
             distances.append(distance)
 
-            curr_time = time.time()
-            time_elapsed = curr_time - start_time
-            if time_elapsed > allowable_time:
+            '''
+            DEBUGGING
+            '''
+            if i < 5:
+                st_reachables = {}
+                for state in TS.states:
+                    st_reachables[state] = True
+                self.update_UI(TS, st_reachables, traj_status)
                 total_reward_plotter.update_graph(rewards)
                 progress_plotter.update_graph(progress)
                 cost_plotter.update_graph(cost)
                 prop_plotter.update_graph(props)
                 distance_plotter.update_graph(distances)
-                break
+                input("Press Enter to continue...")
+            elif i == 5:
+                start_time = time.time()
+            else:
+                curr_time = time.time()
+                time_elapsed = curr_time - start_time
+                if time_elapsed > allowable_time:
+                    total_reward_plotter.update_graph(rewards)
+                    progress_plotter.update_graph(progress)
+                    cost_plotter.update_graph(cost)
+                    prop_plotter.update_graph(props)
+                    distance_plotter.update_graph(distances)
+                    break
+
 
             '''
             if i%5 == 0:
@@ -110,7 +140,7 @@ class MCMCAdapt:
                 distance_plotter.update_graph(distances)
             '''
 
-            undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions)
+            undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
 
             '''
             # randomly pick a transition
@@ -134,10 +164,14 @@ class MCMCAdapt:
             new_distance = self.TS.get_distance(TS)
             self.prism_converter.make_PRISM_TS(TS, "ts")
             #_,_,sat_ratio,num_props,num_satisfied = self.prism.check("ts.pm", "interaction.props")
-            sat_ratio, num_props, num_satisfied = self.check_properties()
+            #sat_ratio, num_props, num_satisfied = self.check_properties()
+            sat_ratio = 1
+            num_props = 1
+            num_satisfied = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs)
-            unweighted_rew_vect, probs_vect = path_traversal.check()
-            new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
+            unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
+            #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
+            new_reward_vect = unweighted_rew_vect
             total_reward = sum(new_reward_vect)
             postcost = self.get_cost(new_reward_vect,num_props,num_satisfied,distance)
             #print(postcost)
@@ -153,7 +187,7 @@ class MCMCAdapt:
                 # reject. put back the old transition
                 #print("reject -- itr {}".format(i))
 
-                self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions)
+                self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
                 '''
                 target.in_trans.remove(transition)
                 transition.target = old_target
@@ -170,10 +204,13 @@ class MCMCAdapt:
                 distance = new_distance
 
                 # check if we have encountered the best design
-                if total_reward >= best_design[1]:
+                if total_reward >= best_design[2]:
                     #print("{} = sum{} ... {}*{}".format(total_reward,new_reward_vect,probs_vect,unweighted_rew_vect))
+                    print("BEST DESIGN!")
                     best_design[0] = TS.copy()
-                    best_design[1] = total_reward
+                    best_design[1] = [trans for trans in removed_transitions]
+                    best_design[2] = total_reward
+                    best_design[3] = traj_status
 
             #print(TS.transitions)
 
@@ -199,26 +236,32 @@ class MCMCAdapt:
         print("checking reachability")
 
         SMUtil().build(best_design[0].transitions, best_design[0].states)
-        print(best_design[0])
         st_reachable = {}
-        for state in all_states:
-            rc = ReachabilityChecker(best_design[0], self.inputs, removed_transitions)
+        print(best_design[0])
+        for state in best_design[0].states.values():
+            rc = ReachabilityChecker(best_design[0], self.inputs, best_design[1])
             st_reachable[state.name] = rc.check(state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
+        self.update_UI(best_design[0], st_reachable, traj_status)
         return best_design[0], st_reachable
 
-    def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions):
+    def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
+        #print("\n\n")
         num_states = len(list(TS.states))
         num_trans = len(all_trans)
         num_added_states = len(added_states)
-        print(num_added_states)
+
+        num_mods = mod_tracker.check_mod_tracker_sum()
+        num_empties = mod_tracker.check_mod_tracker_empties(removed_transitions)
+        mod_limited = num_mods >= self.mod_limit
+        print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
 
         # choose modification -- existing state, existing transition, remove transition, add transition, add state, remove state
         num_state_mods = 0
-        num_transition_mods = 0# num_trans
-        num_transition_deletions = 0#num_trans
-        num_transition_additions = 0#len(removed_transitions)
+        num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
+        num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
+        num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
         num_state_additions = 1
         num_state_deletions = num_added_states
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
@@ -235,14 +278,21 @@ class MCMCAdapt:
         if selection == 1:    # modify existing state
             undoable = (1, (None))
         elif selection == 2:  # modify existing transition
-            #print("modifying an existing transition")
 
             # randomly pick a transition
-            transition = random.choice(all_trans)
+            if mod_limited:
+                print(str(mod_tracker))
+                for trans in removed_transitions:
+                    print(str(trans))
+                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
+            else:
+                transition = random.choice(all_trans)
+
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
 
             # randomly pick a target
             target = random.choice(all_states)
+            print("modifying an existing transition from {} to {}->{}".format(transition.source.name, transition.target.name, target.name))
             old_target_id = transition.target_id
             old_target = transition.target
 
@@ -253,10 +303,21 @@ class MCMCAdapt:
             target.in_trans.append(transition)
             TS.transitions[str(transition.source.id)][str(transition.target.id)].append(transition)
 
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition)
+
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
-            transition = random.choice(all_trans)
-            #print("deleting existing transition from {} to {}".format(transition.source.name, transition.target.name))
+            # randomly pick a transition
+            if mod_limited:
+                print(str(mod_tracker))
+                for trans in removed_transitions:
+                    print(str(trans))
+                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
+            else:
+                transition = random.choice(all_trans)
+
+            print("deleting existing transition from {} to {}".format(transition.source.name, transition.target.name))
             source = transition.source
             target = transition.target
 
@@ -267,10 +328,18 @@ class MCMCAdapt:
             all_trans.remove(transition)
             removed_transitions.append(transition)
 
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition, deleted=True)
+
             undoable = (3, (transition, source, target))
         elif selection == 4:  # add transition
-            transition = random.choice(removed_transitions)
-            #print("adding back existing transition from {} to {}".format(transition.source.name, transition.target.name))
+
+            # randomly pick a transition
+            if mod_limited:
+                transition = random.choice(mod_tracker.get_mod_tracker_empty_trans(removed_transitions))
+            else:
+                transition = random.choice(removed_transitions)
+
             all_trans.append(transition)
             removed_transitions.remove(transition)
 
@@ -278,12 +347,16 @@ class MCMCAdapt:
             source.out_trans.append(transition)
 
             target = random.choice(all_states)
+            print("adding back existing transition from {}, now going to {}".format(transition.source.name, transition.target.name))
             target.in_trans.append(transition)
 
             transition.target = target
             transition.target_id = target.id
 
             TS.transitions[str(transition.source.id)][str(transition.target.id)].append(transition)
+
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition)
 
             undoable = (4, (transition, source, target))
         elif selection == 5:  # add state
@@ -292,6 +365,7 @@ class MCMCAdapt:
             print("adding a state: {}".format(state_name))
             state = State(state_name, self.get_unused_state_id(TS), [micro])
             print("  {}".format(state.id))
+
             all_states.append(state)
             TS.states[state_name] = state
             added_states.append(state)
@@ -306,17 +380,71 @@ class MCMCAdapt:
             for inp in self.inputs.alphabet:
                 transition = Transition(state.id, state.id, inp)
                 transition.source = state
+                transition.source.out_trans.append(transition)
                 transition.target = state
-                removed_transitions.append(transition)
+                transition.target.in_trans.append(transition)
+                all_trans.append(transition)
                 transitions.append(transition)
                 TS.transitions[str(state.id)][str(state.id)].append(transition)
 
             undoable = (5, (state, transitions))
         elif selection == 6:  # delete existing state
+            # choose a state
             state = random.choice(added_states)
             print("deleting existing state: {}".format(state.name))
             trans_toremove = state.out_trans
             input_trans = state.in_trans
+
+            # remove any removed transitions from the removed_transitions list
+            removed_to_delete = []
+            for trans in removed_transitions:
+                if trans.source == state:
+                    removed_to_delete.append(trans)
+            for trans in removed_to_delete:
+                removed_transitions.remove(trans)
+
+            modified_linked = {}
+            for trans in trans_toremove:
+
+                trans.target.in_trans.remove(trans)
+                all_trans.remove(trans)
+
+                #print(len(input_trans))
+                for inp_trans in input_trans:
+                    if inp_trans.condition == trans.condition:
+                        modified_linked[inp_trans] = inp_trans.target
+
+                        #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                        #print("inp trans to remove: {}".format(inp_trans))
+                        #print(type(inp_trans.source.id))
+                        #print(type(inp_trans.target.id))
+                        #print(TS.transitions[inp_trans.source.id])
+                        #print(TS.transitions[inp_trans.source.id][inp_trans.target.id])
+
+                        TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
+                        if trans.target == state:
+                            inp_trans.target = inp_trans.source
+                            inp_trans.target_id = inp_trans.source_id
+                            inp_trans.source.in_trans.append(inp_trans)
+                        else:
+                            inp_trans.target = trans.target
+                            inp_trans.target_id = trans.target_id
+                            trans.target.in_trans.append(inp_trans)
+                        TS.transitions[inp_trans.source.id][inp_trans.target.id].append(inp_trans)
+
+            # take care of any unlinked transitions
+            unlinked_to_delete = []
+            for inp_trans in input_trans:
+                found_link = False
+                for trans in trans_toremove:
+                    if inp_trans.condition == trans.condition:
+                        found_link = True
+                if not found_link:
+                    all_trans.remove(inp_trans)
+                    unlinked_to_delete.append(inp_trans)
+                    inp_trans.source.out_trans.remove(inp_trans)
+                    removed_transitions.append(inp_trans)
+                    TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
 
             # remove from the transitions data structure
             del TS.transitions[state.id]
@@ -327,53 +455,25 @@ class MCMCAdapt:
             for st_old in TS.states:
                 del TS.transitions[TS.states[st_old].id][state.id]
 
-            # remove any removed transitions from the removed_transitions list
-            to_delete = []
-            for trans in removed_transitions:
-                if trans.source == state:
-                    to_delete.append(trans)
-            for trans in to_delete:
-                removed_transitions.remove(trans)
+            undoable = (6, (state, removed_to_delete, modified_linked, unlinked_to_delete, trans_toremove))
 
-            modified_links = {}
-            for trans in trans_toremove:
+            # update the mod tracker
+            for transition in modified_linked:
+                mod_tracker.update_mod_tracker(transition)
+            for transition in unlinked_to_delete:
+                mod_tracker.update_mod_tracker(transition, deleted=True)
 
-                trans.target.in_trans.remove(trans)
-                all_trans.remove(trans)
-
-                for inp_trans in input_trans:
-                    if inp_trans.condition == trans.condition:
-                        modified_links[inp_trans] = inp_trans.target
-                        if trans.target == state:
-                            inp_trans.target = inp_trans.source
-                            inp_trans.source.in_trans.append(inp_trans)
-                        else:
-                            inp_trans.target = trans.target
-                            trans.target.in_trans.append(inp_trans)
-
-            # take care of any unlinked transitions
-            deleted_transitions = []
-            for inp_trans in input_trans:
-                found_link = False
-                for trans in trans_toremove:
-                    if inp_trans.condition == trans.condition:
-                        found_link = True
-                if not found_link:
-                    deleted_transitions.append(inp_trans)
-                    all_trans.remove(inp_trans)
-                    trans.target.in_trans.remove(inp_trans)
-
-            undoable = (6, (state, deleted_transitions, to_delete, modified_links))
-
+        #print(TS)
         return undoable
 
-    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, removed_transitions):
+    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
 
         selection = undoable[0]
 
         if selection == 1:    # undo modify existing state
             pass
         elif selection == 2:  # undo modify existing transition
+            print("undoing that modification")
             target = undoable[1][0]
             transition = undoable[1][1]
             old_target = undoable[1][2]
@@ -386,7 +486,11 @@ class MCMCAdapt:
             old_target.in_trans.append(transition)
 
             TS.transitions[str(transition.source.id)][str(transition.target.id)].append(transition)
+
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition)
         elif selection == 3:  # re-add existing transition
+            print("undoing that removal")
             transition = undoable[1][0]
             source = undoable[1][1]
             target = undoable[1][2]
@@ -397,7 +501,11 @@ class MCMCAdapt:
             all_trans.append(transition)
             TS.transitions[str(transition.source.id)][str(transition.target.id)].append(transition)
             removed_transitions.remove(transition)
+
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition)
         elif selection == 4:  # add transition
+            print("undoing that addition")
             transition = undoable[1][0]
             source = undoable[1][1]
             target = undoable[1][2]
@@ -412,6 +520,9 @@ class MCMCAdapt:
             target = transition.target
             target.in_trans.remove(transition)
 
+            # update the mod tracker
+            mod_tracker.update_mod_tracker(transition, deleted=True)
+
         elif selection == 5:  # add state
             print("undoing the addition of that state")
             state = undoable[1][0]
@@ -419,30 +530,27 @@ class MCMCAdapt:
 
             all_states.remove(state)
             added_states.remove(state)
+
             del TS.states[state.name]
-
             del TS.transitions[state.id]
-            for st_old in TS.states:
-                del TS.transitions[TS.states[st_old].id][state.id]
 
-            for trans in transitions:
-                removed_transitions.remove(trans)
+            for transition in transitions:
+                transition.source.out_trans.remove(transition)
+                transition.target.in_trans.remove(transition)
+                all_trans.remove(transition)
+
         elif selection == 6:  # delete existing state
             state = undoable[1][0]
             print("undoing the deletion of that state")
-            deleted_transitions = undoable[1][1]
-            to_delete = undoable[1][2]
-            modified_links = undoable[1][3]
+            removed_to_delete = undoable[1][1]
+            modified_linked = undoable[1][2]
+            unlinked_to_delete = undoable[1][3]
+            out_trans_removed = undoable[1][4]
 
-            # update the transitions and states data strutures
+            # add to the transitions data structure
             TS.states[state.name] = state
             added_states.append(state)
             all_states.append(state)
-
-            # take care of any unlinked transitions
-            for trans in deleted_transitions:
-                all_trans.append(trans)
-                trans.target.in_trans.append(trans)
 
             # add to transitions
             TS.transitions[state.id] = {}
@@ -450,24 +558,38 @@ class MCMCAdapt:
                 TS.transitions[state.id][TS.states[st_old].id] = []
                 TS.transitions[TS.states[st_old].id][state.id] = []
 
-                for trans in all_trans:
-                    if str(trans.source_id) == str(state.id) and str(trans.target_id) == str(TS.states[st_old].id):
-                        TS.transitions[state.id][TS.states[st_old].id].append(trans)
-                    if str(trans.target_id) == str(state.id) and str(trans.source_id) == str(TS.states[st_old].id):
-                        TS.transitions[TS.states[st_old].id][state.id].append(trans)
-
-            # add back any removed transitions to the remove_transition list
-            for trans in to_delete:
+            # append any removed transitions to the removed_transitions list
+            for trans in removed_to_delete:
                 removed_transitions.append(trans)
 
-            for trans in state.out_trans:
+            for trans in out_trans_removed:
                 all_trans.append(trans)
                 trans.target.in_trans.append(trans)
+                TS.transitions[trans.source.id][trans.target.id].append(trans)
 
-                for link in modified_links:
-                    link.target.in_trans.remove(link)
-                    link.target = modified_links[link]
-                    link.target.in_trans.append(link)
+            for trans in modified_linked:
+                TS.transitions[trans.source.id][trans.target.id].remove(trans)
+
+                trans.target.in_trans.remove(trans)
+                trans.target = state
+                trans.target_id = state.id
+
+                TS.transitions[trans.source.id][trans.target.id].append(trans)
+
+                # update the mod tracker
+                mod_tracker.update_mod_tracker(trans)
+
+            for trans in unlinked_to_delete:
+                all_trans.append(trans)
+                trans.source.out_trans.append(trans)
+                removed_transitions.remove(trans)
+                TS.transitions[trans.source.id][trans.target.id].append(trans)
+
+                # update the mod tracker
+                mod_tracker.update_mod_tracker(trans)
+
+        #print(TS)
+        #print("\n\n")
 
     def check_properties(self):
         sat_ratio = 0
@@ -506,9 +628,15 @@ class MCMCAdapt:
     def get_unused_name(self, starter, TS):
         name = starter
         count = 0
-        for state in TS.states:
-            if state == "{}{}".format(starter, count):
-                count += 1
+        while True:
+            exists = False
+            for state in TS.states:
+                if state == "{}{}".format(starter, count):
+                    exists = True
+                    break
+            if not exists:
+                break
+            count += 1
         return "{}{}".format(name,count)
 
     def get_cost(self, reward_vect, num_props, num_satisfied, distance):
@@ -525,4 +653,4 @@ class MCMCAdapt:
         #print(distance_weight)
         #print(distance_weight * (((num_props-num_satisfied)*1.0/num_props) + (R_neg/counter + 1/(R_pos/counter))))
         #return distance_weight * (((num_props-num_satisfied)*1.0/num_props) + (R_neg/counter + 1/(R_pos/counter)))
-        return ((num_props-num_satisfied)*1.0/num_props) + (R_neg/counter + 1/(R_pos/counter))
+        return ((num_props-num_satisfied)*1.0/num_props) + (R_neg + 1/(R_pos))

@@ -4,6 +4,8 @@ from PyQt5.QtCore import QSize, QRect, Qt, QCoreApplication, QUrl
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QFrame, QScrollArea, QSlider, QComboBox, QGroupBox, QProgressBar, QPushButton, QListWidget, QListWidgetItem, QMainWindow, QAction, QSpinBox, QCheckBox
 from PyQt5 import QtGui
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtGui import QColor
+from PyQt5 import QtCore
 
 from controller import *
 from json_exporter import *
@@ -15,6 +17,8 @@ class App(QMainWindow):
     '''
     Set up the window
     '''
+
+    resized = QtCore.pyqtSignal()
 
     def __init__(self):
         super(App, self).__init__()
@@ -33,14 +37,43 @@ class App(QMainWindow):
         st_reachables["Begin"] = False
         st_reachables["QA_While_Move"] = False
         st_reachables["All_Topics"] = False
-        self.json_exp.export_from_object(self.TS, st_reachables)
 
         # initialize the controller
         self.adapter = Controller(self.TS, sys.argv[1])
+        self.json_exp.export_from_object(self.TS, st_reachables, self.adapter.freqs)
 
         # show the UI
+        self.resized.connect(self.resizeWindow)
         self.initUI()
         self.show()
+
+    def resizeEvent(self, event):
+        self.resized.emit()
+        return super(App, self).resizeEvent(event)
+
+    def resizeWindow(self):
+        print("resizing")
+        self.width = self.frameGeometry().width()
+        self.height = self.frameGeometry().height() - 20
+        self.reward_window.setGeometry(self.width - self.width*0.2, 4*self.height/5, self.width*0.2, self.height/5)
+        self.reward_window.updatePlotGeometry()
+        self.reward_window.update_graph([])
+        self.progress_window.setGeometry(self.width - self.width*0.2, 3*self.height/5, self.width*0.2, self.height/5)
+        self.progress_window.updatePlotGeometry()
+        self.progress_window.update_graph([])
+        self.cost_window.setGeometry(self.width - self.width*0.2, 2*self.height/5, self.width*0.2, self.height/5)
+        self.cost_window.updatePlotGeometry()
+        self.cost_window.update_graph([])
+        self.prop_window.setGeometry(self.width - self.width*0.2, self.height/5, self.width*0.2, self.height/5)
+        self.prop_window.updatePlotGeometry()
+        self.prop_window.update_graph([])
+        self.distance_window.setGeometry(self.width - self.width*0.2, 0, self.width*0.2, self.height/5)
+        self.distance_window.updatePlotGeometry()
+        self.distance_window.update_graph([])
+        self.webView.setGeometry(0,0,self.width, self.height)
+        self.control_panel.setGeometry(0,0,400,self.height)
+        self.trace_panel.setGeometry(10,110,380,self.height - 220)
+        self.trace_list.setGeometry(0,0,380,self.height-220)
 
     def initUI(self):
 
@@ -58,54 +91,53 @@ class App(QMainWindow):
 
         # control panel
         self.control_panel = QLabel(self)
-        self.control_panel.setGeometry(0,0,100,200)
+        self.control_panel.setGeometry(0,0,400,self.height)
         self.control_panel.setFrameShape(QFrame.Box)
-        self.adapt_button = QPushButton("Adapt", self.control_panel)
+        self.control_buttons = QLabel(parent=self.control_panel)
+        self.control_buttons.setGeometry(0,0,400,100)
+        self.adapt_button = QPushButton("Adapt", self.control_buttons)
         self.adapt_button.setGeometry(10, 10, 80, 50)
         self.adapt_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(255, 150, 0);}
                                      .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(200, 100, 0);}""")
         self.adapt_button.clicked.connect(self.mcmc_adapt)
-        self.view_before_button = QPushButton("pre adapt", self.control_panel)
-        self.view_before_button.setGeometry(10, 100, 80, 40)
-        self.view_before_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(100, 100, 100);}
-                                     .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(50, 50, 50);}""")
-        self.view_after_button = QPushButton("post adapt", self.control_panel)
-        self.view_after_button.setGeometry(10, 150, 80, 40)
-        self.view_after_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(0, 200, 230);}
-                                     .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(0, 150, 180);}""")
+
+        self.trace_panel = QScrollArea(parent = self.control_panel)
+        self.trace_panel.setGeometry(10,110,380,self.height - 220)
+        self.trace_list = QListWidget(parent=self.trace_panel)
+        self.trace_list.setGeometry(0,0,380,self.height-220)
 
         # initialize the plotting window
         print(QApplication.desktop().screenGeometry().height())
         print(self.height)
-        self.reward_window = PlotWindow(self, self.width - 300, 4*self.height/5.55, 300, self.height/5.55)
+        self.reward_window = PlotWindow(self, self.width - self.width*0.2, 4*self.height/5.55, self.width*0.2, self.height/5.55)
         self.reward_window.setFrameShape(QFrame.Box)
 
         # initialize progress window
-        self.progress_window = PlotWindow(self, self.width - 300, 3*self.height/5.55, 300, self.height/5.55)
+        self.progress_window = PlotWindow(self, self.width - self.width*0.2, 3*self.height/5.55, self.width*0.2, self.height/5.55)
         self.progress_window.setFrameShape(QFrame.Box)
         self.progress_window.set_title("progress over time")
-        self.progress_window.update_graph([])
+        #self.progress_window.update_graph([])
 
         # initialize cost window
-        self.cost_window = PlotWindow(self, self.width - 300, 2*self.height/5.55, 300, self.height/5.55)
+        self.cost_window = PlotWindow(self, self.width - self.width*0.2, 2*self.height/5.55, self.width*0.2, self.height/5.55)
         self.cost_window.setFrameShape(QFrame.Box)
         self.cost_window.set_title("cost over time")
         self.cost_window.set_ylabel("cost")
-        self.cost_window.update_graph([])
+        #self.cost_window.update_graph([])
 
         # model checking window
-        self.prop_window = PlotWindow(self, self.width - 300, self.height/5.55, 300, self.height/5.55)
+        self.prop_window = PlotWindow(self, self.width - self.width*0.2, self.height/5.55, self.width*0.2, self.height/5.55)
         self.prop_window.setFrameShape(QFrame.Box)
         self.prop_window.set_title("ratio of props satisfied")
         self.prop_window.set_ylabel("ratio")
-        self.prop_window.update_graph([])
+        #self.prop_window.update_graph([])
 
         # initialize distance window
-        self.distance_window = PlotWindow(self, self.width - 300, 0, 300, self.height/5.55)
+        self.distance_window = PlotWindow(self, self.width - self.width*0.2, 0, self.width*0.2, self.height/5.55)
         self.distance_window.setFrameShape(QFrame.Box)
         self.distance_window.set_title("distance to original")
         self.distance_window.set_ylabel("distance")
-        self.distance_window.update_graph([])
+        #self.distance_window.update_graph([])
 
     def load_graph(self):
         url = QUrl.fromLocalFile("{}/d3js/example2.html".format(os.getcwd()))
@@ -116,9 +148,35 @@ class App(QMainWindow):
         with open('d3js/dimensions.json', 'w') as outfile:
             json.dump(dimension_dict, outfile)
 
+    def update_trace_panel(self, traces):
+        self.trace_list.clear()
+
+        counter = 0
+        for trajectory in traces:
+            color = QColor(0, 0, 0, 0)
+            if traces[trajectory] < 0:
+                color = QColor(255,85,50,180)
+            elif traces[trajectory] > 0:
+                color = QColor(57,255,20,180)
+
+            item = QListWidgetItem("{0:<0}. {1:<200}".format("trajectory {}".format(counter), traces[trajectory]))
+            item.setToolTip(str(trajectory))
+            if traces[trajectory] == 0:
+                item.setForeground(QColor(0,0,0,100))
+            item.setBackground(QColor(color))
+
+            counter += 1
+            self.trace_list.addItem(item)
+
+    def update_UI(self, TS, st_reachables, traces):
+        self.json_exp.export_from_object(TS, st_reachables, self.adapter.freqs)
+        self.load_graph()
+        self.update_trace_panel(traces)
+        app.processEvents()
+
     def mcmc_adapt(self):
-        self.TS, st_reachables = self.adapter.mcmc_adapt(self.TS, self.micro_selection, self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window)
-        self.json_exp.export_from_object(self.TS, st_reachables)
+        self.TS, st_reachables = self.adapter.mcmc_adapt(self.TS, self.micro_selection, self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_UI)
+        self.json_exp.export_from_object(self.TS, st_reachables, self.adapter.freqs)
         self.load_graph()
 
     def z3_adapt(self):

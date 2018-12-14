@@ -57,9 +57,12 @@ class ConvertToPrism:
 
             # outer transitions
             transitions = TS.transitions
+            #print(TS)
             for _,temp in transitions.items():
                 for _,trans_list in temp.items():
                     for trans in trans_list:
+                        #print("~~~~~~~~\nsource: {}".format(trans.source.name))
+                        #print("target: {}".format(trans.target.name))
                         pfile.write("\t[] s={} -> (s'={});\n".format(state2num[trans.source].outs[trans.condition],
                                                                      state2num[trans.target].inps[trans.condition]))
 
@@ -111,12 +114,12 @@ class Checker():
 
         print("Initializing the Prism Model Checker...")
         HOST = "localhost"
-        PORT = port
+        self.PORT = port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('Socket created')
 
         try:
-            self.s.bind((HOST, PORT))
+            self.s.bind((HOST, self.PORT))
         except socket.error as err:
             print('Bind failed. Error Code : ' .format(err))
 
@@ -197,22 +200,27 @@ class Checker():
                 continue
 
             prop = prop.strip('\n')
-			#print("sending property {}".format(prop))
+            print("sending property {}".format(prop))
 			#self.conn.send(str(bytes(prop + "\r\n"), 'UTF-8'))
             msg = "{}\r\n".format(prop)
             ready_to_read, ready_to_write, in_error = select.select([], [self.conn], [])
             ready_to_write[0].send(msg.encode('UTF-8'))
+            print("property sent ({})".format(self.PORT))
 
             if prop == "EOP":
                 break;
 
             #confirmation of received property
+            print("getting confirmation... ({})".format(self.PORT))
             ready_to_read, ready_to_write, in_error = select.select([self.conn], [], [])
             data = ready_to_read[0].recv(1024)
+            print("confirmation received ({})".format(self.PORT))
 
             # obtain result
+            print("obtaining result... ({})".format(self.PORT))
             ready_to_read, ready_to_write, in_error = select.select([self.conn], [], [])
             data = ready_to_read[0].recv(1024)
+            print("result obtained ({})".format(self.PORT))
 
             if "R{\"pos\"}=" in prop:
                 rewardsToReturn["R{\"pos\"}"] = float('inf') if data == "infinity" else float(data)

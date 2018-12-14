@@ -106,12 +106,15 @@ class Controller:
         '''self.trajs = [traj1,traj2,traj3,traj4,traj5,traj6]'''
         tracegen = TraceGenerator(self.TS)
         self.trajs = tracegen.get_trajectories(100)
+        #for traj in self.trajs:
+        #    print(traj)
+        #exit(1)
         self.freqs.calculate_freqs(self.trajs)
         self.freqs.calculate_probabilities(self.inputs, self.outputs)
 
-    def mcmc_adapt(self, TS, micro_selection, reward_window, progress_window, cost_window, prop_window, distance_window):
-        mcmc = MCMCAdapt(TS, micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.prisms, self.prism_converter)
-        return mcmc.adapt(0.1, reward_window, progress_window, cost_window, prop_window, distance_window)
+    def mcmc_adapt(self, TS, micro_selection, reward_window, progress_window, cost_window, prop_window, distance_window, update_UI):
+        mcmc = MCMCAdapt(TS, micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.prisms, self.prism_converter, update_UI)
+        return mcmc.adapt(1, reward_window, progress_window, cost_window, prop_window, distance_window)
 
     def z3_adapt(self):
         solver = Solver(self.trajs, InputAlphabet(), OutputAlphabet())

@@ -76,6 +76,13 @@ class Trajectory:
         self.vect = vect
         self.reward = reward
 
+    def __str__(self):
+        string = ""
+        for item in self.vect:
+            string += " --{}-{}--> ".format(item[0].type, item[1].type)
+        string += "   {}".format(self.reward)
+        return string
+
 class Microinteraction:
 
     def __init__(self, type, weight=0):

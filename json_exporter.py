@@ -7,7 +7,7 @@ class JSONExporter:
     def __init__(self):
         pass
 
-    def export_from_object(self, TS, st_reachables):
+    def export_from_object(self, TS, st_reachables, freqs):
         json_array = {}
         json_array["links"] = []
         print(st_reachables)
@@ -36,7 +36,7 @@ class JSONExporter:
         json_array["states"] = {}
         for _,state in TS.states.items():
             if st_reachables[state.name]:
-                json_array["states"][str(state.id)] = {"id": state.id, "gesture": None, "reachble": True, "final": False}
+                json_array["states"][str(state.id)] = {"id": state.id, "gesture": None, "reachble": True, "final": False, "prob": freqs.probs[state.micros[0]["name"]]["Ready"], "micro": state.micros[0]["name"]}
 
         with open('d3js/links.json', 'w') as outfile:
             json.dump(json_array, outfile)
