@@ -46,9 +46,7 @@ class ModificationTracker:
         trans_mods = []
         for item in self.mod_tracker:
             if self.mod_tracker[item][0] == 1:
-                print("~~~~~~~")
                 for trans in item[0].out_trans:
-                    print(str(trans))
                     if trans.condition == item[1]:
                         trans_mods.append(trans)
         return trans_mods

@@ -36,7 +36,7 @@ class JSONExporter:
         json_array["states"] = {}
         for _,state in TS.states.items():
             if st_reachables[state.name]:
-                json_array["states"][str(state.id)] = {"id": state.id, "gesture": None, "reachble": True, "final": False, "prob": freqs.probs[state.micros[0]["name"]]["Ready"], "micro": state.micros[0]["name"]}
+                json_array["states"][str(state.id)] = {"id": state.id, "name": state.name, "gesture": None, "reachble": True, "final": False, "prob": freqs.probs[state.micros[0]["name"]]["Ready"], "micro": state.micros[0]["name"]}
 
         with open('d3js/links.json', 'w') as outfile:
             json.dump(json_array, outfile)

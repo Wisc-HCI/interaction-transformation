@@ -26,7 +26,7 @@ class App(QMainWindow):
         self.width, self.height = screen_resolution.width(), screen_resolution.height()
 
         # initialize the controller
-        self.adapter = Controller()
+        self.adapter = Controller(sys.argv[1])
 
         # show the UI
         self.resized.connect(self.resizeWindow)

@@ -19,26 +19,6 @@ class ReachabilityChecker:
 
         self.removed_transitions = removed_transitions
 
-    def setup(self, f_T, f_M,n):
-        setup_constraints = And(True)
-
-        states = self.TS.states
-
-        # set up f_M
-        for _,state in states.items():
-            setup_constraints = And(setup_constraints, f_M(self.outputs[state.name]) == self.outputs[state.name])
-
-        # set up f_T
-        for source,temp in self.TS.transitions.items():
-            for target,conditions in temp.items():
-                for trans in conditions:
-                    setup_constraints = And(setup_constraints, f_T(self.outputs[trans.source.name], self.inputs[trans.condition]) == self.outputs[trans.target.name])
-
-        for trans in self.removed_transitions:
-            setup_constraints = And(setup_constraints, f_T(self.outputs[trans.source.name], self.inputs[trans.condition])==-1)
-
-        return setup_constraints
-
     def check(self, setup_helper, state):
 
         # function that maps states + inputs to states
@@ -78,13 +58,6 @@ class ReachabilityChecker:
         s = Solver()
         s.add(And(traj_constraints,setup_constraints))
         result = s.check()
-
-        #if state.name == "Begin":
-        #    print(state.id)
-            #m=s.model()
-            #print(m)
-        #print(traj_constraint)
-        #print(result)
 
         if result == sat:
             return True

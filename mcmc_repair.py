@@ -2,6 +2,7 @@ import random
 import time
 import numpy as np
 import threading
+import importlib
 
 from state_machine import *
 from path_traversal import *
@@ -12,7 +13,7 @@ from smt_setup import *
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, update_trace_panel):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
@@ -20,8 +21,9 @@ class MCMCAdapt:
         self.outputs = outputs
         self.micro_selection = micro_selection
         self.update_trace_panel = update_trace_panel
+        self.path_to_interaction = path_to_interaction
 
-        self.mod_limit = int(round(0.15*(2*len(self.TS.states))))
+        self.mod_limit = int(round(mod_perc*(2*len(self.TS.states))))
 
         self.setup_helper = SMTSetup()
 
@@ -79,8 +81,14 @@ class MCMCAdapt:
         best_design = [TS.copy(),[trans for trans in removed_transitions],sum(reward_vect), traj_status]
         start_time = time.time()
 
+        # setup LTL property checker
+        property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
+        Properties = property_module.Properties
+        property_checker = Properties(self.inputs, self.outputs)
+
         #for i in range(1, num_itr+1):
         i=0
+        property_checker.compute_constraints(TS, self.setup_helper, removed_transitions)
         while True:
 
             rewards.append(sum(reward_vect))
@@ -125,7 +133,7 @@ class MCMCAdapt:
 
                 # check if we have encountered the best design
                 if total_reward >= best_design[2]:
-                    print("BEST DESIGN!")
+                    #print("BEST DESIGN!")
                     best_design[0] = TS.copy()
                     best_design[1] = [trans for trans in removed_transitions]
                     best_design[2] = total_reward
@@ -159,7 +167,6 @@ class MCMCAdapt:
         return best_design[0], st_reachable
 
     def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
-        #print("\n\n")
         num_states = len(list(TS.states))
         num_trans = len(all_trans)
         num_added_states = len(added_states)
@@ -167,7 +174,7 @@ class MCMCAdapt:
         num_mods = mod_tracker.check_mod_tracker_sum()
         num_empties = mod_tracker.check_mod_tracker_empties(removed_transitions)
         mod_limited = num_mods >= self.mod_limit
-        print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
+        #print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
 
         # choose modification -- existing state, existing transition, remove transition, add transition, add state, remove state
         num_state_mods = 0
@@ -193,9 +200,9 @@ class MCMCAdapt:
 
             # randomly pick a transition
             if mod_limited:
-                print(str(mod_tracker))
-                for trans in removed_transitions:
-                    print(str(trans))
+                #print(str(mod_tracker))
+                #for trans in removed_transitions:
+                    #print(str(trans))
                 transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
             else:
                 transition = random.choice(all_trans)
@@ -204,7 +211,7 @@ class MCMCAdapt:
 
             # randomly pick a target
             target = random.choice(all_states)
-            print("modifying an existing transition from {} to {}->{}".format(transition.source.name, transition.target.name, target.name))
+            #print("modifying an existing transition from {} to {}->{}".format(transition.source.name, transition.target.name, target.name))
             old_target_id = transition.target_id
             old_target = transition.target
 
@@ -222,14 +229,14 @@ class MCMCAdapt:
         elif selection == 3:  # delete existing transition
             # randomly pick a transition
             if mod_limited:
-                print(str(mod_tracker))
-                for trans in removed_transitions:
-                    print(str(trans))
+                #print(str(mod_tracker))
+                #for trans in removed_transitions:
+                #    print(str(trans))
                 transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
             else:
                 transition = random.choice(all_trans)
 
-            print("deleting existing transition from {} to {}".format(transition.source.name, transition.target.name))
+            #print("deleting existing transition from {} to {}".format(transition.source.name, transition.target.name))
             source = transition.source
             target = transition.target
 
@@ -259,7 +266,7 @@ class MCMCAdapt:
             source.out_trans.append(transition)
 
             target = random.choice(all_states)
-            print("adding back existing transition from {}, now going to {}".format(transition.source.name, transition.target.name))
+            #print("adding back existing transition from {}, now going to {}".format(transition.source.name, transition.target.name))
             target.in_trans.append(transition)
 
             transition.target = target
@@ -274,9 +281,9 @@ class MCMCAdapt:
         elif selection == 5:  # add state
             micro = random.choice(self.micro_selection)
             state_name = self.get_unused_name(micro["name"], TS)
-            print("adding a state: {}".format(state_name))
+            #print("adding a state: {}".format(state_name))
             state = State(state_name, self.get_unused_state_id(TS), [micro])
-            print("  {}".format(state.id))
+            #print("  {}".format(state.id))
 
             all_states.append(state)
             TS.states[state_name] = state
@@ -303,7 +310,7 @@ class MCMCAdapt:
         elif selection == 6:  # delete existing state
             # choose a state
             state = random.choice(added_states)
-            print("deleting existing state: {}".format(state.name))
+            #print("deleting existing state: {}".format(state.name))
             trans_toremove = state.out_trans
             input_trans = state.in_trans
 
@@ -378,7 +385,7 @@ class MCMCAdapt:
         if selection == 1:    # undo modify existing state
             pass
         elif selection == 2:  # undo modify existing transition
-            print("undoing that modification")
+            #print("undoing that modification")
             target = undoable[1][0]
             transition = undoable[1][1]
             old_target = undoable[1][2]
@@ -395,7 +402,7 @@ class MCMCAdapt:
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition)
         elif selection == 3:  # re-add existing transition
-            print("undoing that removal")
+            #print("undoing that removal")
             transition = undoable[1][0]
             source = undoable[1][1]
             target = undoable[1][2]
@@ -410,7 +417,7 @@ class MCMCAdapt:
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition)
         elif selection == 4:  # add transition
-            print("undoing that addition")
+            #print("undoing that addition")
             transition = undoable[1][0]
             source = undoable[1][1]
             target = undoable[1][2]
@@ -429,7 +436,7 @@ class MCMCAdapt:
             mod_tracker.update_mod_tracker(transition, deleted=True)
 
         elif selection == 5:  # add state
-            print("undoing the addition of that state")
+            #print("undoing the addition of that state")
             state = undoable[1][0]
             transitions = undoable[1][1]
 
@@ -446,7 +453,7 @@ class MCMCAdapt:
 
         elif selection == 6:  # delete existing state
             state = undoable[1][0]
-            print("undoing the deletion of that state")
+            #print("undoing the deletion of that state")
             removed_to_delete = undoable[1][1]
             modified_linked = undoable[1][2]
             unlinked_to_delete = undoable[1][3]

@@ -1,37 +1,22 @@
+import json
+
 from trace_synthesis import *
 
 class InputAlphabet:
 
-    def __init__(self):
-        self.alphabet = {
-            "Ready": 0,
-            "Ignore": 1
-        }
-        self.rev_alphabet = {
-            0: "Ready",
-            1: "Ignore"
-        }
+    def __init__(self, io_data):
+        self.alphabet = io_data["inputs"]
+        self.rev_alphabet = {}
+        for inp,id in self.alphabet.items():
+            self.rev_alphabet[id] = inp
 
 class OutputAlphabet:
 
-    def __init__(self):
-        self.alphabet = {
-            "Greeter": 0,
-            "Handoff": 1,
-            "Remark": 2,
-            "Wait": 3,
-            "Answer": 4,
-            "Farewell": 5
-        }
-
-        self.rev_alphabet = {
-            0: "Greeter",
-            1: "Handoff",
-            2: "Remark",
-            3: "Wait",
-            4: "Answer",
-            5: "Farewell"
-        }
+    def __init__(self, io_data):
+        self.alphabet = io_data["outputs"]
+        self.rev_alphabet = {}
+        for inp,id in self.alphabet.items():
+            self.rev_alphabet[id] = inp
 
 class Frequencies:
 

@@ -39,6 +39,11 @@ d3.json("dimensions.json", function(data) {
     var state_id_key = {}
     var id_state_key = {}
     var max_id = -1
+
+    // set up the initial state
+    states.push(0)
+
+    // set up the links
     for(var i = 0; i < link_data.length; i++) {
 
       var obj = link_data[i];
@@ -67,7 +72,7 @@ d3.json("dimensions.json", function(data) {
     }
 
     states.forEach(function(state) {
-      var node_label = state_id_key[state] + "\n(" + state_data[state]["micro"] + ")\n" + state + " - " + state_data[state]["prob"].toFixed(2);
+      var node_label = state_data[state]["name"] + "\n(" + state_data[state]["micro"] + ")\n" + state + " - " + state_data[state]["prob"].toFixed(2);
       console.log(state)
       if (nonverb)
         node_label = state_id_key[state].toUpperCase() + "\ngesture: " + state_data[state]["gesture"];
