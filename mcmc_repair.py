@@ -8,30 +8,27 @@ from path_traversal import *
 from bmc import *
 from reachability_checker import *
 from mod_tracker import *
+from smt_setup import *
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, prism, prism_converter, update_UI):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, update_trace_panel):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
         self.inputs = inputs
         self.outputs = outputs
         self.micro_selection = micro_selection
-        self.update_UI = update_UI
+        self.update_trace_panel = update_trace_panel
 
         self.mod_limit = int(round(0.15*(2*len(self.TS.states))))
 
-        self.prism = prism
-        self.prism_converter = prism_converter
+        self.setup_helper = SMTSetup()
 
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter):
         allowable_time = num_itr * 60
 
         TS = self.TS.copy()
-        SMUtil().build(TS.transitions, TS.states)
-        #print(TS)
-        #print(TS.transitions)
         SMUtil().build(TS.transitions, TS.states)
 
         all_trans = []
@@ -59,26 +56,15 @@ class MCMCAdapt:
                     new_trans.target = state
                     removed_transitions.append(new_trans)
 
-        #print("\nREMOVED TRANSITIONS")
-        #print(removed_transitions)
-
         # calculate the initial reward
-        #solver = BMC(TS, self.trajs, self.inputs, self.outputs)
-        #reward_vect = solver.check()
-        #precost = self.get_cost(reward_vect)
         distance = self.TS.get_distance(TS)
-        self.prism_converter.make_PRISM_TS(TS, "ts")
-        #_,_,sat_ratio,num_props,num_satisfied = self.prism.check("ts.pm", "interaction.props")
-        #sat_ratio, num_props, num_satisfied = self.check_properties()
         sat_ratio = 1
-        num_props = 1
-        num_satisfied = 1
         path_traversal = PathTraversal(TS, self.trajs, self.freqs)
         unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
         #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
         reward_vect = unweighted_rew_vect
         total_reward = sum(reward_vect)
-        precost = self.get_cost(reward_vect, num_props, num_satisfied, distance)
+        precost = self.get_cost(reward_vect, distance)
 
         # set up the modification tracker dataset
         mod_tracker = ModificationTracker(TS,self.inputs)
@@ -91,7 +77,7 @@ class MCMCAdapt:
         accept_counter = 0
         reject_counter = 0
         best_design = [TS.copy(),[trans for trans in removed_transitions],sum(reward_vect), traj_status]
-        #start_time = time.time()
+        start_time = time.time()
 
         #for i in range(1, num_itr+1):
         i=0
@@ -103,119 +89,49 @@ class MCMCAdapt:
             props.append(sat_ratio)
             distances.append(distance)
 
-            '''
-            DEBUGGING
-            '''
-            if i < 5:
-                st_reachables = {}
-                for state in TS.states:
-                    st_reachables[state] = True
-                self.update_UI(TS, st_reachables, traj_status)
+            curr_time = time.time()
+            time_elapsed = curr_time - start_time
+            if time_elapsed > allowable_time:
                 total_reward_plotter.update_graph(rewards)
                 progress_plotter.update_graph(progress)
                 cost_plotter.update_graph(cost)
                 prop_plotter.update_graph(props)
                 distance_plotter.update_graph(distances)
-                input("Press Enter to continue...")
-            elif i == 5:
-                start_time = time.time()
-            else:
-                curr_time = time.time()
-                time_elapsed = curr_time - start_time
-                if time_elapsed > allowable_time:
-                    total_reward_plotter.update_graph(rewards)
-                    progress_plotter.update_graph(progress)
-                    cost_plotter.update_graph(cost)
-                    prop_plotter.update_graph(props)
-                    distance_plotter.update_graph(distances)
-                    break
-
-
-            '''
-            if i%5 == 0:
-                total_reward_plotter.update_graph(rewards)
-                progress_plotter.update_graph(progress)
-                cost_plotter.update_graph(cost)
-                prop_plotter.update_graph(props)
-                distance_plotter.update_graph(distances)
-            '''
+                break
 
             undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
 
-            '''
-            # randomly pick a transition
-            transition = random.choice(all_trans)
-
-            # randomly pick a target
-            target = random.choice(all_states)
-            old_target_id = transition.target_id
-            old_target = transition.target
-
-            # try the new transition
-            old_target.in_trans.remove(transition)
-            transition.target = target
-            transition.target_id = target.id
-            target.in_trans.append(transition)
-            '''
-
             # calculate the reward
-            #solver = BMC(TS, self.trajs, self.inputs, self.outputs)
-            #reward_vect = solver.check()
             new_distance = self.TS.get_distance(TS)
-            self.prism_converter.make_PRISM_TS(TS, "ts")
-            #_,_,sat_ratio,num_props,num_satisfied = self.prism.check("ts.pm", "interaction.props")
-            #sat_ratio, num_props, num_satisfied = self.check_properties()
-            sat_ratio = 1
-            num_props = 1
-            num_satisfied = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs)
             unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
             #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
             new_reward_vect = unweighted_rew_vect
             total_reward = sum(new_reward_vect)
-            postcost = self.get_cost(new_reward_vect,num_props,num_satisfied,distance)
-            #print(postcost)
-            #print(precost)
+            postcost = self.get_cost(new_reward_vect,distance)
 
             alpha = min(1, math.exp(-0.1 * (postcost*1.0/precost)))
             u = np.random.random()
 
             # accept or reject
-            #print("u: {}\na: {}".format(u, alpha))
             if u > alpha:
                 reject_counter += 1
-                # reject. put back the old transition
-                #print("reject -- itr {}".format(i))
-
                 self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
-                '''
-                target.in_trans.remove(transition)
-                transition.target = old_target
-                transition.target_id = old_target.id
-                old_target.in_trans.append(transition)
-                '''
-
             else:
                 accept_counter += 1
-                # accept!
-                #print("accept -- itr {}".format(i))
                 precost = postcost
                 reward_vect = new_reward_vect
                 distance = new_distance
 
                 # check if we have encountered the best design
                 if total_reward >= best_design[2]:
-                    #print("{} = sum{} ... {}*{}".format(total_reward,new_reward_vect,probs_vect,unweighted_rew_vect))
                     print("BEST DESIGN!")
                     best_design[0] = TS.copy()
                     best_design[1] = [trans for trans in removed_transitions]
                     best_design[2] = total_reward
                     best_design[3] = traj_status
 
-            #print(TS.transitions)
-
-            #if True:
-            if i%5 == 0:
+            if i%1000 == 0:
                 print("itr {}".format(i))
             i+=1
 
@@ -228,10 +144,6 @@ class MCMCAdapt:
 
         print("took {} seconds".format(end_time - start_time))
         print("{} accepts, {} rejects".format(accept_counter, reject_counter))
-        #print("\nREMOVED TRANSITIONS")
-        #print(removed_transitions)
-        #print(TS.transitions)
-        #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         print(best_design[0].states)
         print("checking reachability")
 
@@ -240,10 +152,10 @@ class MCMCAdapt:
         print(best_design[0])
         for state in best_design[0].states.values():
             rc = ReachabilityChecker(best_design[0], self.inputs, best_design[1])
-            st_reachable[state.name] = rc.check(state)
+            st_reachable[state.name] = rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
-        self.update_UI(best_design[0], st_reachable, traj_status)
+        self.update_trace_panel(traj_status)
         return best_design[0], st_reachable
 
     def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
@@ -414,13 +326,6 @@ class MCMCAdapt:
                     if inp_trans.condition == trans.condition:
                         modified_linked[inp_trans] = inp_trans.target
 
-                        #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                        #print("inp trans to remove: {}".format(inp_trans))
-                        #print(type(inp_trans.source.id))
-                        #print(type(inp_trans.target.id))
-                        #print(TS.transitions[inp_trans.source.id])
-                        #print(TS.transitions[inp_trans.source.id][inp_trans.target.id])
-
                         TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
                         if trans.target == state:
                             inp_trans.target = inp_trans.source
@@ -588,29 +493,6 @@ class MCMCAdapt:
                 # update the mod tracker
                 mod_tracker.update_mod_tracker(trans)
 
-        #print(TS)
-        #print("\n\n")
-
-    def check_properties(self):
-        sat_ratio = 0
-        num_props = 0
-        num_satisfied = 0
-
-        prism_threads = {}
-        for i in range(len(self.prism)):
-            prism_threads[i] = threading.Thread(target=self.prism[i].check, args=("ts.pm", "{}interaction.props".format(i),))
-            prism_threads[i].daemon = True
-            prism_threads[i].start()
-
-        for key in prism_threads.keys():
-            prism_threads[key].join()
-            num_props += self.prism[key].num_props
-            num_satisfied += self.prism[key].num_satisfied
-
-        sat_ratio = num_satisfied*1.0/num_props if num_props > 0 else 0
-
-        return sat_ratio, num_props, num_satisfied
-
     def get_unused_state_id(self, TS):
         id = 0
         while True:
@@ -639,7 +521,7 @@ class MCMCAdapt:
             count += 1
         return "{}{}".format(name,count)
 
-    def get_cost(self, reward_vect, num_props, num_satisfied, distance):
+    def get_cost(self, reward_vect, distance):
         R_neg = 0.01
         R_pos = 0.01
         counter = 0.01 + len(reward_vect)
@@ -649,8 +531,4 @@ class MCMCAdapt:
             elif i > 0:
                 R_pos += abs(i)
 
-        #distance_weight = 1 + ((distance**distance**distance) )# * 1.0/len(self.TS.states))
-        #print(distance_weight)
-        #print(distance_weight * (((num_props-num_satisfied)*1.0/num_props) + (R_neg/counter + 1/(R_pos/counter))))
-        #return distance_weight * (((num_props-num_satisfied)*1.0/num_props) + (R_neg/counter + 1/(R_pos/counter)))
-        return ((num_props-num_satisfied)*1.0/num_props) + (R_neg + 1/(R_pos))
+        return (R_neg + 1/(R_pos))

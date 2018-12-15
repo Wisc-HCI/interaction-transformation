@@ -1,4 +1,5 @@
 from z3 import *
+from smt_setup import *
 
 class ReachabilityChecker:
 
@@ -38,7 +39,7 @@ class ReachabilityChecker:
 
         return setup_constraints
 
-    def check(self, state):
+    def check(self, setup_helper, state):
 
         # function that maps states + inputs to states
         f_T = Function("f_T",IntSort(), IntSort(),IntSort())
@@ -50,7 +51,7 @@ class ReachabilityChecker:
         states = self.TS.states
         n = len(self.TS.states)
 
-        setup_constraints = self.setup(f_T, f_M, n)
+        setup_constraints = setup_helper.setup(f_T, f_M, n, self.TS, self.inputs, self.outputs, self.removed_transitions)
 
         sts = [Int("st_{}".format(i)) for i in range(2*n)]
 

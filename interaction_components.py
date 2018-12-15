@@ -76,6 +76,15 @@ class Trajectory:
         self.vect = vect
         self.reward = reward
 
+    def eliminate_loops(self):
+        pass
+
+        # remove loops
+        #loop_len = len(self.)
+
+        # remove self-loops that occur more than once
+
+
     def __str__(self):
         string = ""
         for item in self.vect:

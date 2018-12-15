@@ -8,8 +8,6 @@ from PyQt5.QtGui import QColor
 from PyQt5 import QtCore
 
 from controller import *
-from json_exporter import *
-from reader import *
 from plot_window import *
 
 class App(QMainWindow):
@@ -27,20 +25,8 @@ class App(QMainWindow):
         screen_resolution = desktop.screenGeometry()
         self.width, self.height = screen_resolution.width(), screen_resolution.height()
 
-        # read the interaction
-        self.json_exp = JSONExporter()
-        self.TS, self.micro_selection = Reader("interaction.xml").build()
-        st_reachables = {}
-        for state in self.TS.states:
-            st_reachables[state] = True
-        # DELETE:
-        st_reachables["Begin"] = False
-        st_reachables["QA_While_Move"] = False
-        st_reachables["All_Topics"] = False
-
         # initialize the controller
-        self.adapter = Controller(self.TS, sys.argv[1])
-        self.json_exp.export_from_object(self.TS, st_reachables, self.adapter.freqs)
+        self.adapter = Controller()
 
         # show the UI
         self.resized.connect(self.resizeWindow)
@@ -149,6 +135,10 @@ class App(QMainWindow):
             json.dump(dimension_dict, outfile)
 
     def update_trace_panel(self, traces):
+        self.update_trace_panel_helper(traces)
+        app.processEvents()
+
+    def update_trace_panel_helper(self, traces):
         self.trace_list.clear()
 
         counter = 0
@@ -168,15 +158,8 @@ class App(QMainWindow):
             counter += 1
             self.trace_list.addItem(item)
 
-    def update_UI(self, TS, st_reachables, traces):
-        self.json_exp.export_from_object(TS, st_reachables, self.adapter.freqs)
-        self.load_graph()
-        self.update_trace_panel(traces)
-        app.processEvents()
-
     def mcmc_adapt(self):
-        self.TS, st_reachables = self.adapter.mcmc_adapt(self.TS, self.micro_selection, self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_UI)
-        self.json_exp.export_from_object(self.TS, st_reachables, self.adapter.freqs)
+        self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
         self.load_graph()
 
     def z3_adapt(self):
