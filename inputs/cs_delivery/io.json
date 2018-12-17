@@ -1,3 +1,4 @@
 {"inputs": {"Ready": 0, "Ignore": 1},
  "outputs": {"Greeter": 0, "Remark": 1, "Farewell": 2, "Handoff": 3},
- "mod_percent": 1}
+ "mod_percent": 1,
+ "time_mcmc": 0.05}

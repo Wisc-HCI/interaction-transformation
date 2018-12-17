@@ -25,6 +25,7 @@ class Controller:
         self.inputs = InputAlphabet(json_data)
         self.outputs = OutputAlphabet(json_data)
         self.mod_perc = json_data["mod_percent"]
+        self.time_mcmc = json_data["time_mcmc"]
 
         # generate FAKE sample traces
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
@@ -44,7 +45,7 @@ class Controller:
 
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
         mcmc = MCMCAdapt(self.TS, self.micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
-        self.TS, st_reachables = mcmc.adapt(0.2, reward_window, progress_window, cost_window, prop_window, distance_window)
+        self.TS, st_reachables = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window)
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
     def z3_adapt(self):

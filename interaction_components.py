@@ -57,9 +57,10 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward):
+    def __init__(self, vect, reward, is_prefix=False):
         self.vect = vect
         self.reward = reward
+        self.is_prefix = is_prefix
 
     def eliminate_loops(self):
         pass

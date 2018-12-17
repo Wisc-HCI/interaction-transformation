@@ -1,9 +1,10 @@
 class PathTraversal:
 
-    def __init__(self, TS, trajectories, freqs):
+    def __init__(self, TS, trajectories, freqs, removed_transitions):
         self.TS = TS
         self.trajectories = trajectories
         self.freqs = freqs
+        self.removed_transitions = removed_transitions
 
     def check(self):
 
@@ -41,6 +42,15 @@ class PathTraversal:
                     break
                 else:
                     curr_st = path_trans.target
+
+            # double check that the final state is actually possible
+            if sat and not traj.is_prefix:
+                can_end = False
+                for trans in self.removed_transitions:
+                    if trans.source == curr_st:
+                        can_end = True
+                if not can_end:
+                    sat = False
 
             if sat:
                 #print("sat")
