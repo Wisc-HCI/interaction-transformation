@@ -17,7 +17,7 @@ class Properties:
         # function that maps states + inputs to states
         f_T = Function("f_T",IntSort(), IntSort(),IntSort())
 
-        # function that maps states to microinteractions
+        # function that maps state ID's to state microinteractions
         f_M = Function("f_M", IntSort(),IntSort())
 
         # n is the number of states in the interaction
@@ -89,6 +89,22 @@ class Properties:
             results.append(1)
             counterexamples.append(None)
 
+        s = Solver()
+        sts4 = [Int("st_{}_4".format(i)) for i in range(2*n)]
+        inps4 = [Int("inp_{}_4".format(i)) for i in range(2*n-1)]
+        path_constraint = setup_helper.counterexample(f_T, f_M, inps4, sts4, n, self.inputs, self.outputs, size=2*n)
+        s.add(And(self.farewell_end_constraint(f_T, f_M, n, self.inputs, self.outputs, inps4, sts4),setup_constraints, path_constraint))
+        result = s.check()
+        if result == sat:
+            results.append(0)
+            m=s.model()
+            print(m)
+            raw_trajectory = setup_helper.get_result(m,inps4,sts4,n)
+            counterexamples.append(raw_trajectory)
+        else:
+            results.append(1)
+            counterexamples.append(None)
+
         return results, counterexamples
 
     def bad_suffix_constraint(self, f_T, f_M, n, inputs, outputs, inps, sts):
@@ -109,7 +125,7 @@ class Properties:
                 each_output_constraint = And(each_output_constraint, has_pair_constraint)
 
             last_included_constraint = Or(False)
-            for i in range(idx,(2**n)):
+            for i in range(idx,(2**n)-1):
                 last_included_constraint = Or(last_included_constraint, sts[i]==sts[-1])
 
             constraint = Or(constraint, And(each_output_constraint, last_included_constraint))
@@ -133,9 +149,21 @@ class Properties:
 
         negation_constraint = Or(False)
         for i in range(2*n-1):
-            #negation_constraint = Or(negation_constraint, And(f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
+            #negation_constraint = Or(negation_constraint, And(sts[i]>=0, f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
             negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==outputs["Farewell"]))
 
         constraint = And(constraint, Not(negation_constraint))
+
+        return constraint
+
+    def farewell_end_constraint(self, f_T, f_M, n, inputs, outputs, inps, sts):
+        constraint = And(True)
+
+        negation_constraint = Or(False)
+        for i in range(2*n-2):
+            #negation_constraint = Or(negation_constraint, And(sts[i]>=0, f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
+            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==outputs["Farewell"], sts[i+1]>=0, f_M(sts[i+1])>=0))
+
+        constraint = And(constraint, negation_constraint)
 
         return constraint

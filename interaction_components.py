@@ -75,7 +75,7 @@ class Trajectory:
         string = ""
         for item in self.vect:
             string += " --{}-{}--> ".format(item[0].type, item[1].type)
-        string += "   {}".format(self.reward)
+        string += "       <R: {}>, prefix={}".format(self.reward, self.is_prefix)
         return string
 
 class Microinteraction:
