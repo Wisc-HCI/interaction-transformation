@@ -79,7 +79,9 @@ class MCMCAdapt:
         distances = []
         accept_counter = 0
         reject_counter = 0
-        best_design = [TS.copy(),[trans for trans in removed_transitions],sum(reward_vect), traj_status]
+        #best_design = [TS.copy(),[trans for trans in removed_transitions],sum(reward_vect), traj_status]
+        TS_copy = TS.copy()
+        best_design = [TS_copy,[TS_copy.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions],sum(reward_vect), traj_status]
         start_time = time.time()
 
         # setup LTL property checker
@@ -138,7 +140,8 @@ class MCMCAdapt:
                     if total_reward >= best_design[2]:
                         #print("BEST DESIGN!")
                         best_design[0] = TS.copy()
-                        best_design[1] = [trans for trans in removed_transitions]
+                        #best_design[1] = [trans for trans in removed_transitions]
+                        best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
                         best_design[2] = total_reward
                         best_design[3] = traj_status
 
@@ -181,9 +184,9 @@ class MCMCAdapt:
             st_reachable[state.name] = rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
+        print(best_design[1])
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         _,_,traj_status = path_traversal.check()
-        print(traj_status)
         self.update_trace_panel(traj_status)
         return best_design[0], st_reachable
 

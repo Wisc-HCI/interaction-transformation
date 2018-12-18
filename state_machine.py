@@ -62,6 +62,31 @@ class TS(object):
 
         return distance
 
+    def duplicate_transition(self, other_source_name, other_condition, other_target_name):
+        trans_to_return = None
+
+        source = None
+        source_id = None
+        target = None
+        target_id = None
+        condition = other_condition
+        for st_name, state in self.states.items():
+            if st_name == other_source_name:
+                source = state
+                source_id = state.id
+            if st_name == other_target_name:
+                target = state
+                target_id = state.id
+
+        trans_to_return = Transition(source_id, target_id, condition)
+        trans_to_return.source = source
+        trans_to_return.target = target
+
+        if trans_to_return is None:
+            exit(1)
+        return trans_to_return
+
+
     def copy(self):
         # handle the states and the init
         states_copy = {}

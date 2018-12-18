@@ -20,7 +20,7 @@ class Controller:
             st_reachables[state] = True
 
         self.freqs = Frequencies()
-        json_raw=open("inputs/{}/io.json".format(path_to_interaction))
+        json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
         self.inputs = InputAlphabet(json_data)
         self.outputs = OutputAlphabet(json_data)
@@ -53,9 +53,23 @@ class Controller:
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
-        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
-        self.TS, st_reachables = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window)
-        self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
+
+        for i in range(2):
+            mcmc = MCMCAdapt(self.TS, self.micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
+            self.TS, st_reachables = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window)
+            self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
+
+            # get new trajectories
+            tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(self.path_to_interaction))
+            TraceGenerator = tracegen_module.TraceGenerator
+            tracegen = TraceGenerator(self.TS)
+            new_trajs = tracegen.get_trajectories(100)
+            self.trajs = self.trajs + new_trajs
+
+            # calculate frequencies associated with states
+            self.freqs.build_ds(self.inputs, self.outputs)
+            self.freqs.calculate_freqs(self.trajs)
+            self.freqs.calculate_probabilities(self.inputs, self.outputs)
 
     def z3_adapt(self):
         solver = Solver(self.trajs, InputAlphabet(), OutputAlphabet())

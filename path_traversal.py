@@ -51,7 +51,7 @@ class PathTraversal:
                         can_end = True
                 if not can_end:
                     sat = False
-                    trajectory_status[traj] = traj.reward
+                    trajectory_status[traj] = 0
 
             if sat:
                 #print("sat")
