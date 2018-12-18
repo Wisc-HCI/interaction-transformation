@@ -89,11 +89,17 @@ class MCMCAdapt:
         Properties = property_module.Properties
         property_checker = Properties(self.inputs, self.outputs)
 
+        # determine the maximum possible reward
+        max_possible_reward = 0
+        for traj in self.trajs:
+            max_possible_reward += max(0,traj.reward)
+
         #for i in range(1, num_itr+1):
         i=0
         result = 0
         while result < 1:
             start_time = time.time()
+
             while True:
 
                 rewards.append(sum(reward_vect))
@@ -104,7 +110,7 @@ class MCMCAdapt:
 
                 curr_time = time.time()
                 time_elapsed = curr_time - start_time
-                if time_elapsed > allowable_time:
+                if time_elapsed > allowable_time or sum(reward_vect) == max_possible_reward:
                     total_reward_plotter.update_graph(rewards)
                     progress_plotter.update_graph(progress)
                     cost_plotter.update_graph(cost)
@@ -153,8 +159,6 @@ class MCMCAdapt:
             results, counterexamples, output_mapping = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
             print("correctness property satisfaction: {}".format(result))
-            print(str(best_design[0]))
-            print(self.outputs)
             counter = 0
             for counterexample in counterexamples:
                 if counterexample is not None:
@@ -162,6 +166,7 @@ class MCMCAdapt:
                     traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, output_mapping, is_prefix=counterexample[1])
                     print(traj)
                     self.trajs.append(traj)
+                    reward_vect.append(-1)
                 counter += 1
 
         rewards.append(total_reward)
@@ -173,7 +178,6 @@ class MCMCAdapt:
 
         print("took {} seconds".format(end_time - start_time))
         print("{} accepts, {} rejects".format(accept_counter, reject_counter))
-        print(best_design[0].states)
         print("checking reachability")
 
         SMUtil().build(best_design[0].transitions, best_design[0].states)
@@ -184,7 +188,6 @@ class MCMCAdapt:
             st_reachable[state.name] = rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
-        print(best_design[1])
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         _,_,traj_status = path_traversal.check()
         self.update_trace_panel(traj_status)

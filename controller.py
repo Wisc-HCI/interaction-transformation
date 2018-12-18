@@ -55,6 +55,7 @@ class Controller:
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
 
         for i in range(2):
+            print("Day {}".format(i))
             mcmc = MCMCAdapt(self.TS, self.micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
             self.TS, st_reachables = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window)
             self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
