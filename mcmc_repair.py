@@ -147,15 +147,16 @@ class MCMCAdapt:
                 i+=1
 
             SMUtil().build(best_design[0].transitions, best_design[0].states)
-            results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
+            results, counterexamples, output_mapping = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
             print("correctness property satisfaction: {}".format(result))
             print(str(best_design[0]))
+            print(self.outputs)
             counter = 0
             for counterexample in counterexamples:
                 if counterexample is not None:
                     print("\nPROPERTY {} VIOLATED".format(counter))
-                    traj = self.build_trajectory(counterexample, best_design[0].states, -1)
+                    traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, output_mapping, is_prefix=counterexample[1])
                     print(traj)
                     self.trajs.append(traj)
                 counter += 1
@@ -176,12 +177,13 @@ class MCMCAdapt:
         st_reachable = {}
         print(best_design[0])
         for state in best_design[0].states.values():
-            rc = ReachabilityChecker(best_design[0], self.inputs, best_design[1])
+            rc = ReachabilityChecker(best_design[0], self.inputs, self.outputs, best_design[1])
             st_reachable[state.name] = rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         _,_,traj_status = path_traversal.check()
+        print(traj_status)
         self.update_trace_panel(traj_status)
         return best_design[0], st_reachable
 
@@ -559,14 +561,14 @@ class MCMCAdapt:
 
         return (R_neg + 1/(R_pos))
 
-    def build_trajectory(self, rawinput, states, reward):
+    def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
         traj_vect = []
         print(rawinput)
         for item in rawinput:
             micro = None
             for st_name, st in states.items():
-                if int(st.id) == item[1]:
+                if output_mapping[st_name] == item[1]:
                     micro = st.micros[0]["name"]
             traj_vect.append((HumanInput(self.inputs.rev_alphabet[item[0]]), Microinteraction(micro, 0)))
 
-        return Trajectory(traj_vect, reward)
+        return Trajectory(traj_vect, reward, is_prefix)

@@ -3,7 +3,7 @@ from smt_setup import *
 
 class ReachabilityChecker:
 
-    def __init__(self, TS, inputs, removed_transitions):
+    def __init__(self, TS, inputs, micros, removed_transitions):
         self.TS = TS
 
         # get input and output dictionaries
@@ -16,6 +16,8 @@ class ReachabilityChecker:
             if state != TS.init.name:
                 self.outputs[state] = idx
                 idx += 1
+
+        self.micros = micros.alphabet
 
         self.removed_transitions = removed_transitions
 
@@ -31,17 +33,17 @@ class ReachabilityChecker:
         states = self.TS.states
         n = len(self.TS.states)
 
-        setup_constraints = setup_helper.setup(f_T, f_M, n, self.TS, self.inputs, self.outputs, self.removed_transitions)
+        setup_constraints = setup_helper.setup(f_T, f_M, n, self.TS, self.inputs, self.outputs, self.micros, self.removed_transitions)
 
         sts = [Int("st_{}".format(i)) for i in range(2*n)]
 
         traj_constraints = And(sts[0]==0)
         for st in sts:
             traj_constraints = And(traj_constraints, st>=-1, st<n)
-            traj_constraints = And(traj_constraints, f_M(st)>=-1, f_M(st)<n)
+            traj_constraints = And(traj_constraints, f_M(st)>=0, f_M(st)<len(self.micros))
         for inp in self.inputs:
             traj_constraints = And(traj_constraints, f_T(-1, self.inputs[inp])==-1)
-        traj_constraints = And(traj_constraints, f_M(-1)==-1)
+        #traj_constraints = And(traj_constraints, f_M(-1)==-1)
 
         for i in range(len(sts)-1):
             temp_constraint = And(False)
@@ -51,7 +53,7 @@ class ReachabilityChecker:
 
         temp_constraint = And(False)
         for i in range(len(sts)):
-            temp_constraint = Or(temp_constraint, f_M(sts[i])==self.outputs[state.name])
+            temp_constraint = Or(temp_constraint, sts[i]==self.outputs[state.name])
 
         traj_constraints = And(traj_constraints, temp_constraint)
 

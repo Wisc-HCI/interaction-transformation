@@ -5,14 +5,14 @@ class SMTSetup:
     def __init__(self):
         pass
 
-    def setup(self, f_T, f_M, n, TS, inputs, outputs, removed_transitions):
+    def setup(self, f_T, f_M, n, TS, inputs, outputs, micros, removed_transitions):
         setup_constraints = And(True)
 
         states = TS.states
 
         # set up f_M
         for _,state in states.items():
-            setup_constraints = And(setup_constraints, f_M(outputs[state.name]) == outputs[state.name])
+            setup_constraints = And(setup_constraints, f_M(outputs[state.name]) == micros[state.micros[0]["name"]])
 
         # set up f_T
         for source,temp in TS.transitions.items():

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nta>
+
+	<name>announcement</name>
+
+	<group id="0" init="true" final="false" x="182.0" y="134.0">
+		<name>Arrive</name>
+		<micro>
+			<name>Wait</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+	</group>
+
+	<group id="3" init="false" final="false" x="675.0" y="270.0">
+		<name>Announcement</name>
+		<micro>
+			<name>Remark</name>
+		</micro>
+	</group>
+
+	<group id="4" init="false" final="false" x="675.0" y="270.0">
+		<name>Wait_For_Action</name>
+		<micro>
+			<name>Wait</name>
+		</micro>
+
+	</group>
+
+	<group id="5" init="false" final="true" x="675.0" y="270.0">
+		<name>Bye</name>
+		<micro>
+			<name>Farewell</name>
+		</micro>
+
+	</group>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="3"/>
+		<guard condition="human_ready"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="5"/>
+		<guard condition="human_ready"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<design>Delivery</design>
+</nta>

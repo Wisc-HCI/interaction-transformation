@@ -33,6 +33,15 @@ class Controller:
         tracegen = TraceGenerator(self.TS)
         self.trajs = tracegen.get_trajectories(100)
 
+        # add default microinteractions not already in micro_selection
+        for micro in self.outputs.alphabet:
+            exists = False
+            for micro_selected in self.micro_selection:
+                if micro_selected["name"] == micro:
+                    exists = True
+            if not exists:
+                self.micro_selection.append({"name": micro})
+
         # consolidate the trajectories
 
 

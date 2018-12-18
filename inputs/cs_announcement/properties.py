@@ -45,18 +45,23 @@ class Properties:
             m = s.model()
             print(m)
             raw_trajectory = setup_helper.get_result(m,inps0,sts0,n)
-            counterexamples.append((raw_trajectory, True))
+            counterexamples.append((raw_trajectory,True))
         else:
             results.append(1)
             counterexamples.append(None)
 
-        # greeter
+        # the future involves a farewell
+        # the end corresponds to farewell
+        # the future involves an announcement
+        # if announced and ack'ed, there will be no other announcement
+
+        # no further announcement
         print("Checking property 2...")
         s = Solver()
         sts1 = [Int("st_{}_1".format(i)) for i in range(2*n)]
         inps1 = [Int("inp_{}_1".format(i)) for i in range(2*n-1)]
         path_constraint = setup_helper.counterexample(f_T, f_M, inps1, sts1, n, self.inputs, self.outputs, size=2*n)
-        s.add(And(self.greeter_constraint(f_M, inps1, sts1),setup_constraints, path_constraint))
+        s.add(And(self.no_further_announcement_constraint(f_T, f_M, n, self.inputs, self.outputs, self.micros, inps1, sts1),setup_constraints, path_constraint))
         result = s.check()
         if result == sat:
             results.append(0)
@@ -83,7 +88,7 @@ class Properties:
         sts2 = [Int("st_{}_2".format(i)) for i in range(2*n)]
         inps2 = [Int("inp_{}_2".format(i)) for i in range(2*n-1)]
         path_constraint = setup_helper.counterexample(f_T, f_M, inps2, sts2, n, self.inputs, self.outputs, size=2*n)
-        s.add(And(self.give_exists_constraint(f_T, f_M, n, self.inputs, self.outputs, self.micros, inps2, sts2),setup_constraints, path_constraint))
+        s.add(And(self.announcement_exists_constraint(f_T, f_M, n, self.inputs, self.outputs, self.micros, inps2, sts2),setup_constraints, path_constraint))
         result = s.check()
         if result == sat:
             results.append(0)
@@ -158,16 +163,27 @@ class Properties:
 
         return constraint
 
-    def greeter_constraint(self, f_M, inps, sts):
-        return And(sts[0] != self.outputs["Greet"])
+    def no_further_announcement_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
+        constraint = And(True)
 
-    def give_exists_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
+        for i in range(2*n-1):
+            curr_state_constraint = And(sts[i]!=-1, f_M(sts[i])==micros["Remark"], inps[i]==inputs["Ready"])
+
+            to_negate_constraint = Or(False)
+            for j in range(i+1,2*n-1):
+                to_negate_constraint = Or(to_negate_constraint, And(sts[j]!=-1, f_M(sts[j])==micros["Remark"]))
+
+            constraint = And(constraint, Implies(curr_state_constraint, Not(to_negate_constraint)))
+
+        return Not(constraint)
+
+    def announcement_exists_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
         constraint = And(True)
 
         negation_constraint = Or(False)
         for i in range(2*n-1):
             #negation_constraint = Or(negation_constraint, And(sts[i]>=0, f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
-            negation_constraint = Or(negation_constraint, And(sts[i]>=0,Or(f_M(sts[i])==micros["Handoff"],f_M(sts[i])==micros["Remark"])))
+            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Remark"]))
 
         constraint = And(constraint, Not(negation_constraint))
 
