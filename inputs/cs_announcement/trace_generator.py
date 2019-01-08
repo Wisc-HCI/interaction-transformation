@@ -27,17 +27,9 @@ class TraceGenerator:
             traj.append((HumanInput("Ready"), Microinteraction(self.TS.init.micros[0]["name"], 0)))
 
             curr_state = self.TS.init
-            highest_amount = 0
-            curr_amount = 0
             while True:
                 options = curr_state.out_trans
 
-                if curr_state.micros[0]["name"] == "Remark":
-                    curr_amount += 1
-                else:
-                    if curr_amount > highest_amount:
-                        highest_amount = curr_amount
-                    curr_amount = 0
                 if len(options) == 0:
                     break
                 conditions = ["Ready", "Ignore"]
@@ -50,10 +42,43 @@ class TraceGenerator:
                         curr_state = option.target
                         break
 
-                traj.append((HumanInput(selection), Microinteraction(trans.target.micros[0]["name"], 0)))
+                if trans is not None:
+                    traj.append((HumanInput(selection), Microinteraction(trans.target.micros[0]["name"], 0)))
 
-            score = np.random.random()
-            if highest_amount > 1:
-                score -= 1
+            score = np.random.random() - 0.5
+
+            violation1 = False
+            violation25 = False
+            violation34 = False
+            for i in range(len(traj)):
+                if i < len(traj)-1 and traj[i][1].type == "Remark" and traj[i+1][0].type == "Ignore" and traj[i+1][1].type == "Remark":
+                    violation1 = True
+
+                if i < len(traj)-1 and traj[i][1].type == "Remark" and traj[i+1][0].type == "Ready":
+                    for j in range(i+1, len(traj)):
+                        if traj[j][1].type == "Remark":
+                            violation2 = True
+
+                if i < len(traj)-1 and traj[i][1].type == "Remark" and traj[i+1][0].type == "Ignore":
+                    exists = False
+                    for j in range(i+1, len(traj)):
+                        if traj[j][1].type == "Remark":
+                            exists = True
+                    if not exists:
+                        violation3 = True
+
+            if violation1:
+                score -= 0.25
+            if violation25:
+                score -= 0.25
+            elif not violation1:
+                score += 0.25
+            if violation34:
+                score -= 0.25
+            elif not violation25 and not violation1:
+                score += 0.25
+
+            score = min(max(-1,score),1)
+
             trajs.append(Trajectory(traj,score))
         return trajs

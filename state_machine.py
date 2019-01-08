@@ -46,6 +46,11 @@ class TS(object):
         self.init = init               # State
         self.transitions = transitions # {source}{target} = [Transition]
 
+        # helper variables
+        self.id2state = {}
+        for state_name,state in self.states.items():
+            self.id2state[state.id] = state
+
     def get_distance(self, other):
         distance = 0
         for source_id, temp in self.transitions.items():

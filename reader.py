@@ -1,6 +1,9 @@
 import xml.etree.ElementTree as ET
 
 from state_machine import *
+from interaction_components import *
+
+import pickle
 
 class Reader:
 
@@ -68,3 +71,42 @@ class Reader:
         SMUtil().build(transitions, states)
 
         return TS(states, transitions, init), micro_selection # todo -- don't return a list of micro dummies
+
+class TrajectoryReader:
+
+    def __init__(self, picklename):
+        self.picklename = picklename
+
+    def get_trajectories(self):
+
+        trajs = []
+
+        with open(self.picklename, "rb") as infile:
+            raw_trajs = pickle.load(infile)
+
+            for raw_traj in raw_trajs:
+                is_correctness = raw_traj.pop(-1)
+                is_prefix = raw_traj.pop(-1)
+                score = raw_traj.pop(-1)
+
+                traj_vect = [(HumanInput("Ready"),Microinteraction(raw_traj[0][0]))]
+
+                i = 1
+                while i < len(raw_traj)-1:
+
+                    micro = Microinteraction(raw_traj[i+1][0])
+                    raw_human_input = raw_traj[i][-1]
+                    if raw_human_input == "human_ready":
+                        inp = "Ready"
+                    else:
+                        inp = "Ignore"
+                    human_input = HumanInput(inp)
+
+                    item = (human_input,micro)
+                    traj_vect.append(item)
+
+                    i += 2
+
+                trajs.append(Trajectory(traj_vect,score,is_prefix,is_correctness))
+
+        return trajs

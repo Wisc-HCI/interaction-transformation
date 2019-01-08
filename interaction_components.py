@@ -57,10 +57,11 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward, is_prefix=False):
+    def __init__(self, vect, reward, is_prefix=False, is_correctness=False):
         self.vect = vect
         self.reward = reward
         self.is_prefix = is_prefix
+        self.is_correctness = is_correctness
 
     def eliminate_loops(self):
         pass
@@ -70,13 +71,15 @@ class Trajectory:
 
         # remove self-loops that occur more than once
 
-
-    def __str__(self):
+    def comparable_string(self):
         string = ""
         for item in self.vect:
             string += " --{}-{}--> ".format(item[0].type, item[1].type)
-        string += "       <R: {}>, prefix={}".format(self.reward, self.is_prefix)
+        string += "{}".format("correctness" if self.is_correctness else "")
         return string
+
+    def __str__(self):
+        return "{}       <R: {}>, prefix={} {}".format(self.comparable_string(), self.reward, self.is_prefix, "correctness" if self.is_correctness else "")
 
 class Microinteraction:
 

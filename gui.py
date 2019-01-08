@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 from PyQt5.QtCore import QSize, QRect, Qt, QCoreApplication, QUrl
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QFrame, QScrollArea, QSlider, QComboBox, QGroupBox, QProgressBar, QPushButton, QListWidget, QListWidgetItem, QMainWindow, QAction, QSpinBox, QCheckBox
 from PyQt5 import QtGui
@@ -20,6 +21,25 @@ class App(QMainWindow):
 
     def __init__(self):
         super(App, self).__init__()
+
+        # parse arguments
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-m", "--mcmc", help="run mcmc",
+                        action="store_true")
+        parser.add_argument("-r", "--random", help="run random",
+                        action="store_true")
+        parser.add_argument("-s", "--smt", help="run smt",
+                        action="store_true")
+        args = parser.parse_args(sys.argv[2:])
+
+        self.algorithm="mcmc"
+        if args.mcmc:
+            self.algorithm="mcmc"
+        if args.random:
+            self.algorithm="random"
+        if args.smt:
+            self.algorithm="smt"
+
         self.title = 'Repair Progress'
         desktop = QApplication.desktop()
         screen_resolution = desktop.screenGeometry()
@@ -85,7 +105,12 @@ class App(QMainWindow):
         self.adapt_button.setGeometry(10, 10, 80, 50)
         self.adapt_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(255, 150, 0);}
                                      .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(200, 100, 0);}""")
-        self.adapt_button.clicked.connect(self.mcmc_adapt)
+        if self.algorithm == "mcmc":
+            self.adapt_button.clicked.connect(self.mcmc_adapt)
+        elif self.algorithm == "random":
+            self.adapt_button.clicked.connect(self.random_adapt)
+        elif self.algorithm == "smt":
+            self.adapt_button.clicked.connect(self.z3_adapt)
 
         self.trace_panel = QScrollArea(parent = self.control_panel)
         self.trace_panel.setGeometry(10,110,380,self.height - 220)
@@ -149,7 +174,7 @@ class App(QMainWindow):
             elif traces[trajectory] > 0:
                 color = QColor(57,255,20,180)
 
-            item = QListWidgetItem("{0:<0}. {1:<200}".format("trajectory {}".format(counter), traces[trajectory]))
+            item = QListWidgetItem("{0:<0}. {1:<200}".format("trajectory {} {}".format(counter, "(correctness)" if trajectory.is_correctness else ""), traces[trajectory]))
             item.setToolTip(str(trajectory))
             if traces[trajectory] == 0:
                 item.setForeground(QColor(0,0,0,100))
@@ -160,6 +185,10 @@ class App(QMainWindow):
 
     def mcmc_adapt(self):
         self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
+        self.load_graph()
+
+    def random_adapt(self):
+        self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel, self.algorithm)
         self.load_graph()
 
     def z3_adapt(self):

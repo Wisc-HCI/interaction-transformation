@@ -1,4 +1,5 @@
 from z3 import *
+from kosajaru import *
 
 class Properties:
 
@@ -34,6 +35,19 @@ class Properties:
 
         # interaction must end
         print("Checking property 1...")
+        kosa = Kosajaru(TS)
+        strong_sccs = kosa.compute(self.inputs)
+        for scc in strong_sccs:
+            print(str(scc))
+        if len(strong_sccs) == 0:
+            results.append(1)
+            counterexamples.append(None)
+        else:
+            results.append(0)
+            for scc in strong_sccs:
+                counterexamples.append((kosa.get_scc_counterexample(scc,self.inputs),True))
+        '''
+        print("Checking property 1...")
         s = Solver()
         sts0 = [Int("st_{}_0".format(i)) for i in range((4*(n-1))+1)]
         inps0 = [Int("inp_{}_0".format(i)) for i in range(4*(n-1))]
@@ -49,6 +63,7 @@ class Properties:
         else:
             results.append(1)
             counterexamples.append(None)
+        '''
 
         # the future involves a farewell
         # the end corresponds to farewell
