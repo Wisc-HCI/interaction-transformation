@@ -1,6 +1,6 @@
 import json
 
-from trace_synthesis import *
+#from trace_synthesis import *
 
 class InputAlphabet:
 
@@ -63,13 +63,8 @@ class Trajectory:
         self.is_prefix = is_prefix
         self.is_correctness = is_correctness
 
-    def eliminate_loops(self):
-        pass
-
-        # remove loops
-        #loop_len = len(self.)
-
-        # remove self-loops that occur more than once
+    def eliminate_section(self, start_inc, end_inc):
+        self.vect = self.vect[:start_inc] + self.vect[end_inc:]
 
     def comparable_string(self):
         string = ""
@@ -77,6 +72,18 @@ class Trajectory:
             string += " --{}-{}--> ".format(item[0].type, item[1].type)
         string += "{}".format("correctness" if self.is_correctness else "")
         return string
+
+    def comparable_component_string(self,start,length):
+        string = ""
+
+        for i in range(start,start+length):
+            item = self.vect[i]
+            string += " --{}-{}--> ".format(item[0].type, item[1].type)
+
+        return string
+
+    def __len__(self):
+        return len(self.vect)
 
     def __str__(self):
         return "{}       <R: {}>, prefix={} {}".format(self.comparable_string(), self.reward, self.is_prefix, "correctness" if self.is_correctness else "")

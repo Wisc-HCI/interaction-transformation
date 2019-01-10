@@ -1,5 +1,6 @@
 import threading
 import importlib
+from copy import deepcopy
 
 from interaction_components import *
 from mcmc_repair import *
@@ -34,7 +35,7 @@ class Controller:
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
         TraceGenerator = tracegen_module.TraceGenerator
         tracegen = TraceGenerator(self.TS)
-        self.trajs = tracegen.get_trajectories(100)
+        self.trajs = tracegen.get_trajectories(10)
         '''
         self.consolidate_trajectories()
 
@@ -90,8 +91,61 @@ class Controller:
         return solver.solve()
 
     def consolidate_trajectories(self):
-        self.consolidated_traj_dict = {}
+        #print("RAW TRAJS")
+        #self.print_trajs(self.trajs)
+
+        no_loop_trajectories = self.remove_trajectory_loops()
+        #print("\n\nTRAJS WITH LOOPS REMOVED")
+        #self.print_trajs(no_loop_trajectories)
+        self.ignore_duplicate_trajectories(no_loop_trajectories)
+
+        #print("\n\nCONSOLIDATED TRAJS")
+        #self.print_trajs(self.consolidated_trajs)
+
+        #print("\n\nRAW TRAJS AGAIN")
+        #self.print_trajs(self.trajs)
+
+    def remove_trajectory_loops(self):
+        no_loop_trajectories = []
+
         for traj in self.trajs:
+            traj_copy = copy.deepcopy(traj)
+            trimmed_traj = self.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+            no_loop_trajectories.append(trimmed_traj)
+
+        return no_loop_trajectories
+
+    def remove_traj_loop_helper(self, traj, length):
+
+        if length == 0:
+            return traj
+        else:
+
+            start_idx_1 = 0
+            start_idx_2 = length
+            idxs_to_remove = []
+            while True:
+
+                if start_idx_2 + length > len(traj):
+                    break
+
+                if traj.comparable_component_string(start_idx_1,length) == traj.comparable_component_string(start_idx_2,length):
+                    idxs_to_remove.append(start_idx_2)
+                    start_idx_1 += length
+                    start_idx_2 += length
+                else:
+                    start_idx_1 += 1
+                    start_idx_2 += 1
+
+            rev_sorted_idxs_to_remove = sorted(idxs_to_remove, key=int, reverse=True)
+            for idx in rev_sorted_idxs_to_remove:
+                traj.eliminate_section(idx,idx+length)
+
+            return self.remove_traj_loop_helper(traj,length-1)
+
+    def ignore_duplicate_trajectories(self, no_loop_trajs):
+        self.consolidated_traj_dict = {}
+        for traj in no_loop_trajs:
             if traj.comparable_string() not in self.consolidated_traj_dict:
                 self.consolidated_traj_dict[traj.comparable_string()] = [Trajectory(traj.vect, traj.reward, traj.is_prefix, traj.is_correctness), 1]
             else:
@@ -104,3 +158,7 @@ class Controller:
         self.consolidated_trajs = []
         for traj,vect in self.consolidated_traj_dict.items():
             self.consolidated_trajs.append(vect[0])
+
+    def print_trajs(self, trajs):
+        for traj in trajs:
+            print(traj.comparable_string())
