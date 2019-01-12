@@ -84,6 +84,7 @@ class Kosajaru:
 
     def bfs_scc(self, curr_state, dest, input_dict, trans_to_try, visited_trans, curr_path, path_to_dest):
 
+        print("start {}, dest ({},{}) ----- path: {}".format(curr_state.id,dest[0],dest[1].id,curr_path))
         if len(path_to_dest) > 0:
             return
 
@@ -121,6 +122,8 @@ class Kosajaru:
         path_to_dest = []
 
         self.bfs(init,root,input_dict,[],[],curr_path,path_to_dest)
+        if len(path_to_dest) == 0:
+            return None
 
         # now that we have the path to dest, get a path through the scc
         path = path_to_dest
@@ -128,10 +131,10 @@ class Kosajaru:
         path_post_root = []
         curr = root
         for state in scc.vertices:
-            for inp,inp_id in input_dict.items():
-                to_remove.append((inp_id,state))
+            for trans in state.in_trans:
+                to_remove.append((input_dict[trans.condition],state))
         tup = (input_dict[root.out_trans[0].condition],root.out_trans[0].target)
-        path_post_root.append((tup[0],tup[1].id))
+        path_post_root.append((tup[0],int(tup[1].id)))
         to_remove.remove(tup)
         print("next: {}".format(path_post_root))
         curr = tup[1]

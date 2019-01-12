@@ -81,6 +81,9 @@ class MCMCAdapt:
             sat_ratio = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
             unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
+            print(unweighted_rew_vect)
+            print(probs_vect)
+            print(traj_status)
             #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
             reward_vect = unweighted_rew_vect
             total_reward = sum(reward_vect)
@@ -153,19 +156,24 @@ class MCMCAdapt:
                     print("itr {}".format(i))
                 i+=1
 
+            print("MCMC steps: {}".format(i))
             SMUtil().build(best_design[0].transitions, best_design[0].states)
-            results, counterexamples, output_mapping = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
+            print(str(best_design[0]))
+            results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
             print("correctness property satisfaction: {}".format(result))
             counter = 0
             for counterexample in counterexamples:
                 if counterexample is not None:
                     print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
-                    traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, output_mapping, is_prefix=counterexample[1])
+                    traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, counterexample[2], is_prefix=counterexample[1])
                     print(traj)
                     self.trajs.append(traj)
                     correctness_trajs.append(traj)
                 counter += 1
+
+            for traj in self.trajs:
+                print(traj.comparable_string())
 
         plot_data["rewards"].append(total_reward)
         total_reward_plotter.update_graph(plot_data["rewards"])
@@ -568,11 +576,17 @@ class MCMCAdapt:
     def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
         traj_vect = []
         print(rawinput)
+        print(output_mapping)
         for item in rawinput:
             micro = None
             for st_name, st in states.items():
                 if output_mapping[st_name] == item[1]:
                     micro = st.micros[0]["name"]
             traj_vect.append((HumanInput(self.inputs.rev_alphabet[item[0]]), Microinteraction(micro, 0)))
+            if micro == None:
+                print("ERROR: microinteraction name be None")
+                print(output_mapping)
+                print(item)
+                exit(1)
 
         return Trajectory(traj_vect, reward, is_prefix, is_correctness=True)

@@ -87,17 +87,21 @@ class Mutator:
 
         ts_modifier = TSModifier(mod_limit,micro_selection,inputs)
 
+        mut_count = 0
         while not mutation_accepted:
 
             # make a mutation
             ts_modifier.modify_TS(self.TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
-            print(self.TS)
+            if mut_count>0 and mut_count%1000 == 0:
+                print("{} mutations attempted".format(mut_count))
 
             # verify the mutation
             results, counterexamples, output_mapping = property_checker.compute_constraints(self.TS, setup_helper, removed_transitions)
 
             if sum(results)*1.0/len(results) == 1.0:
                 break
+
+        print(self.TS)
 
         # package up TS and return it
         groups = {}
