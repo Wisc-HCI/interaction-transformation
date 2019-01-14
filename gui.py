@@ -192,8 +192,8 @@ class App(QMainWindow):
         self.load_graph()
 
     def z3_adapt(self):
-        solution = self.adapter.z3_adapt()
-        self.json_exp.export_from_z3(solution)
+        self.adapter.z3_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
+        #self.json_exp.export_from_z3(solution)
         self.load_graph()
 
 if __name__ == "__main__":

@@ -4,29 +4,35 @@ from copy import deepcopy
 
 from interaction_components import *
 from mcmc_repair import *
+from z3_adapt import *
 from json_exporter import *
 from verification.prism_util import *
 from reader import *
+import util
 
 class Controller:
 
     def __init__(self, path_to_interaction):
         self.path_to_interaction = path_to_interaction
+        json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
+        json_data = json.load(json_raw)
 
         # read the interaction
         self.json_exp = JSONExporter()
-        self.TS, self.micro_selection = Reader("inputs/{}/interaction.xml".format(path_to_interaction)).build()
+        self.TS, self.micro_selection = Reader("inputs/{}/interaction.xml".format(path_to_interaction),json_data).build()
         st_reachables = {}
         for state in self.TS.states:
             st_reachables[state] = True
 
         self.freqs = Frequencies()
-        json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
-        json_data = json.load(json_raw)
         self.inputs = InputAlphabet(json_data)
-        self.outputs = OutputAlphabet(json_data)
+        raw_outputs = {"outputs": {}}
+        for output,output_data in json_data["outputs"].items():
+            raw_outputs["outputs"][output] = output_data["id"]
+        self.outputs = OutputAlphabet(raw_outputs)
         self.mod_perc = json_data["mod_percent"]
         self.time_mcmc = json_data["time_mcmc"]
+
 
         # read in arrays, form trajectories
         self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
@@ -71,6 +77,8 @@ class Controller:
         self.TS, st_reachables, correctness_trajs = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
+        # POSSIBLY write the correctness trajs to a correctness.pkl file
+
         # get new trajectories
         '''
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(self.path_to_interaction))
@@ -86,9 +94,23 @@ class Controller:
         self.freqs.calculate_probabilities(self.inputs, self.outputs)
         '''
 
-    def z3_adapt(self):
-        solver = Solver(self.trajs, InputAlphabet(), OutputAlphabet())
-        return solver.solve()
+    def z3_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
+
+        plot_data = { "rewards": [],
+                      "progress": [],
+                      "cost": [],
+                      "props": [],
+                      "distances": [],
+                      "time": []
+                    }
+
+        #for i in range(2):
+        #print("Day {}".format(i))
+        z3 = Z3Adapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
+        self.TS, st_reachables, correctness_trajs = z3.adapt(reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
+        self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
+
+        # POSSIBLY write the correctness trajs to a correctness.pkl file
 
     def consolidate_trajectories(self):
         #print("RAW TRAJS")
@@ -110,38 +132,10 @@ class Controller:
 
         for traj in self.trajs:
             traj_copy = copy.deepcopy(traj)
-            trimmed_traj = self.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+            trimmed_traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
             no_loop_trajectories.append(trimmed_traj)
 
         return no_loop_trajectories
-
-    def remove_traj_loop_helper(self, traj, length):
-
-        if length == 0:
-            return traj
-        else:
-
-            start_idx_1 = 0
-            start_idx_2 = length
-            idxs_to_remove = []
-            while True:
-
-                if start_idx_2 + length > len(traj):
-                    break
-
-                if traj.comparable_component_string(start_idx_1,length) == traj.comparable_component_string(start_idx_2,length):
-                    idxs_to_remove.append(start_idx_2)
-                    start_idx_1 += length
-                    start_idx_2 += length
-                else:
-                    start_idx_1 += 1
-                    start_idx_2 += 1
-
-            rev_sorted_idxs_to_remove = sorted(idxs_to_remove, key=int, reverse=True)
-            for idx in rev_sorted_idxs_to_remove:
-                traj.eliminate_section(idx,idx+length)
-
-            return self.remove_traj_loop_helper(traj,length-1)
 
     def ignore_duplicate_trajectories(self, no_loop_trajs):
         self.consolidated_traj_dict = {}

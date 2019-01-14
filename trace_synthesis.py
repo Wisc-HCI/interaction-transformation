@@ -4,7 +4,7 @@ import time
 
 class Solver():
 
-    def __init__(self, trajectories, inputs, outputs):
+    def __init__(self, trajectories, inputs, outputs, max_mods):
         self.trajs = trajectories
 
         # get input and output dictionaries
@@ -13,18 +13,55 @@ class Solver():
         self.outputs = outputs.alphabet
         self.rev_outputs = outputs.rev_alphabet
 
-        # hardcoded values
-        self.MAX_STATES = 8
+        self.max_mods = max_mods
 
-    def solve(self):
+    def solve(self,TS,removed_transitions):
+
+        self.MAX_STATES = len(TS.states) + self.max_mods
 
         print("SOLVER --> setting up problem")
+
+        # set up constraints for existing interaction
+        self.out_map = {TS.init.name: 0}
+        micros = self.outputs
+        idx = 1
+        for state in TS.states:
+            if state != TS.init.name:
+                self.out_map[state] = idx
+                idx += 1
+        # function that maps states + inputs to states
+        f_T_e = Function("f_T_e",IntSort(), IntSort(),IntSort())
+        # function that maps state ID's to state microinteractions
+        f_M_e = Function("f_M_e", IntSort(),IntSort())
+        setup_constraints = And(True)
+        states = TS.states
+        # set up f_M_e
+        for _,state in states.items():
+            setup_constraints = And(setup_constraints, f_M_e(self.out_map[state.name]) == micros[state.micros[0]["name"]])
+        # set up f_T_e
+        for source,temp in TS.transitions.items():
+            for target,conditions in temp.items():
+                for trans in conditions:
+                    setup_constraints = And(setup_constraints, f_T_e(self.out_map[trans.source.name], self.inputs[trans.condition]) == self.out_map[trans.target.name])
+        for trans in removed_transitions:
+            setup_constraints = And(setup_constraints, f_T_e(self.out_map[trans.source.name], self.inputs[trans.condition])==-1)
+        for inp in self.inputs:
+            setup_constraints = And(setup_constraints, f_T_e(-1, self.inputs[inp])==-1)
 
         # bitvector that decides whether a trajectory is included or not
         B = {}
         for i in range(len(self.trajs)):
             traj = self.trajs[i]
             B[traj] = Real("b_{}".format(i))
+
+        # bitvector that decides whether a modification has been made
+        Mods = {}
+        i = 0
+        for state_name,state in TS.states.items():
+            Mods[self.out_map[state.name]] = {}
+            for inp in self.inputs:
+                Mods[self.out_map[state.name]][self.inputs[inp]] = Real("mod_{}".format(i))
+                i += 1
 
         # calculate score of each trajectory
         self.score = self.simple_score()
@@ -44,7 +81,7 @@ class Solver():
         # initial state
         I = Int('I')
 
-        constraints = self.make_constraints(B, n, f_T, f_M, I)
+        constraints = And(setup_constraints,self.make_constraints(TS,Mods,B, n, f_T, f_T_e, f_M, I))
         objective = 0
         for traj in self.trajs:
             print(self.score[traj])
@@ -69,13 +106,17 @@ class Solver():
             m = o.model()
             print(m)
 
+        else:
+            print("ERROR: no solution")
+            exit()
+
         solution = self.package_results(m, f_T, f_M, n)
         curr_time = time.time()
         print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
         print("SOLVER --> returning solution")
         return solution
 
-    def make_constraints(self, B, n, f_T, f_M, I):
+    def make_constraints(self, TS, Mods, B, n, f_T, f_T_e, f_M, I):
         constraints = And(True)
 
         # ensure that there is at least one state
@@ -99,7 +140,7 @@ class Solver():
             traj = self.trajs[idx]
             traj_constraint = And(True)
 
-            sts = [Int("sts_{}_{}".format(idx,i)) for i in range(self.MAX_STATES+1)] # in range n+1
+            sts = [Int("sts_{}_{}".format(idx,i)) for i in range(2*self.MAX_STATES+1)] # in range n+1
             traj_constraint = And(traj_constraint, sts[0]==0)
 
             # first state
@@ -111,11 +152,18 @@ class Solver():
                 traj_constraint = And(traj_constraint, f_T(sts[i-1],self.inputs[traj.vect[i][0].type])==sts[i])
                 traj_micro = And(traj_micro, f_M(sts[i])==self.outputs[traj.vect[i][1].type])
 
+                # set the end state
+                if i == len(traj.vect)-1 and not traj.is_prefix:
+                    end_constraint = Or(False)
+                    for inp in self.inputs:
+                        end_constraint = Or(end_constraint, f_T(sts[i],self.inputs[inp])==-1)
+                    traj_constraint = And(traj_constraint,end_constraint)
+
             constraints = And(constraints, Or(B[traj]==0,B[traj]==1))
             constraints = And(constraints, Implies(And(traj_constraint,traj_micro),B[traj]==1))
             constraints = And(constraints, Implies(B[traj]==1,And(traj_constraint,traj_micro)))
-            constraints = And(constraints, Implies(And(traj_constraint,Not(traj_micro)),B[traj]==0))
-            constraints = And(constraints, Implies(B[traj]==0,And(traj_constraint,Not(traj_micro))))
+            constraints = And(constraints, Implies(Not(And(traj_constraint,traj_micro)),B[traj]==0))
+            constraints = And(constraints, Implies(B[traj]==0,Not(And(traj_constraint,traj_micro))))
 
         # force outputs leading to a state to be the same (thus, states correspond with the robot's output)
         combos = []
@@ -157,97 +205,33 @@ class Solver():
                 constraints = And(constraints, f_T(st,self.inputs[inp])>=-1)
                 constraints = And(constraints, f_T(st,self.inputs[inp])<n)
 
-        # ensure the farewell property
-        farewell_property = self.farewell_prop(f_T,f_M,I,n)
-        constraints = And(constraints, farewell_property)
+        # state labels should be the same for pre-existing states
+        for _,state in TS.states.items():
+            constraints = And(constraints, f_M(self.out_map[state.name]) == self.outputs[state.micros[0]["name"]])
 
-        # ensure the end property
-        end_property = self.end_prop(f_T,f_M,n)
-        constraints = And(constraints, end_property)
+        # set the modification bitvector
+        for state_name,state in TS.states.items():
+            for inp in self.inputs:
+                constraints = And(constraints, Implies(f_T(self.out_map[state.name],self.inputs[inp])==f_T_e(self.out_map[state.name],self.inputs[inp]),
+                                                           Mods[self.out_map[state.name]][self.inputs[inp]]==0))
+                constraints = And(constraints, Implies(f_T(self.out_map[state.name],self.inputs[inp])!=f_T_e(self.out_map[state.name],self.inputs[inp]),
+                                                           Mods[self.out_map[state.name]][self.inputs[inp]]==1))
+
+        # limit modifications to mod_limit
+        mod_var_list = []
+        for state_name,state in TS.states.items():
+            for inp in self.inputs:
+                mod_var_list.append(Mods[self.out_map[state.name]][self.inputs[inp]])
+
+        constraints = And(constraints,Sum(mod_var_list)<=self.max_mods)
 
         return constraints
-
-    def M_k(self, f_T, I, vars):
-        constraint_path = And(True)
-        # initial state
-        # constraint_path = vars[0] == I
-
-        # all other states
-        for i in range(self.MAX_STATES):
-            constraint_next = Or(False)
-            for inp in self.inputs:
-                constraint_next = Or(constraint_next, f_T(vars[i],self.inputs[inp]) == vars[i+1])
-            constraint_path = And(constraint_path, constraint_next)
-
-        return constraint_path
-
-    def L_k(self, f_T):
-        L_k = Or(False)
-        for i in range(self.MAX_STATES):
-            L_k = Or(L_k, f_T(4,i)>=0)
-        return L_k
-
-    # THESE PROPERTIES ARE GREATLY SIMPLIFIED
-    def farewell_loop(self, f_T, vars):
-        prop = Or(False)
-        for l in range(self.MAX_STATES):
-            lL_k = f_T(4,l)>=0
-
-
-    def farewell_noloop(self, f_T, f_M, vars, n):
-        prop = Or(False)
-        for i in range(self.MAX_STATES):
-            prop = Or(prop, f_M(vars[i])==self.outputs["Farewell"])
-            #prop = Or(prop,vars[i]==4)
-        return prop
-    ####
-
-    def farewell_prop(self, f_T, f_M, I,n):
-
-        # make n variables
-        vars = []
-        vars_nonzero = []
-        for i in range(self.MAX_STATES + 1):
-            vars.append(Int('M_k_{}'.format(i)))
-            if i > 0:
-                vars_nonzero.append(vars[-1])
-
-        # obtain M_k
-        M_k = self.M_k(f_T, I, vars)
-
-        # obtain L_k
-        L_k = self.L_k(f_T)
-
-        # non-loop condition
-        no_loop = self.farewell_noloop(f_T, f_M, vars, n)
-
-        # loop condition
-        #loop = self.farewell_loop(f_T, vars)
-
-        # there exists a path that does not lead to farewell
-        #prop = Not( And(M_k, And(Not(L_k),Not(no_loop))) )
-        #prop = ForAll(vars_nonzero, Not( And(M_k, Not(no_loop))))
-        prop = Not(Exists(vars_nonzero, And(M_k,Not(no_loop))))
-        prop = And(prop, vars[0]==I)
-
-        return prop
-
-    def end_prop(self, f_T, f_M,n):
-        prop = And(True)
-        for st in range(self.MAX_STATES):
-            for inp in self.rev_inputs:
-                prop = And(prop, Implies(f_M(st)==self.outputs["Farewell"],
-                                         f_T(st,inp)==-1))
-        return prop
 
     def simple_score(self):
         scores = {}
 
         for traj in self.trajs:
-            traj_score = 0
-            for step in traj.vect:
-                traj_score += step[1].weight
-            scores[traj] = traj_score
+            scores[traj] = traj.reward
 
         return scores
 
@@ -259,10 +243,13 @@ class Solver():
             for inp in self.inputs:
                 target = int(str(m.evaluate(f_T(state,self.inputs[inp]))))
                 #target_output = m.evaluate(f_A(state,self.inputs[inp]))
-                id = m.evaluate(f_M(state))
-                id = self.rev_outputs[int(str(id))]   # string
+                src_name = m.evaluate(f_M(state))
+                src_name = self.rev_outputs[int(str(src_name))]   # string
 
-                io = (state, inp, target, id)
+                tar_name = m.evaluate(f_M(target))
+                tar_name = "-1" if target == -1 else self.rev_outputs[int(str(tar_name))]   # string
+
+                io = (state, src_name, inp, target, tar_name)
                 results.append(io)
 
         return Solution(results,demos,n)

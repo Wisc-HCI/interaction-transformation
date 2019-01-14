@@ -1,205 +1,13 @@
-import random
-import time
 import numpy as np
-import threading
-import importlib
+import random
+import state_machine as sm
 
-from state_machine import *
-from path_traversal import *
-from bmc import *
-from reachability_checker import *
-from mod_tracker import *
-from smt_setup import *
-from interaction_components import Trajectory, HumanInput, Microinteraction
-import util
+class TSModifier:
 
-class MCMCAdapt:
-
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm):
-        self.TS = TS
-        self.trajs = trajs
-        self.freqs = freqs
-        self.inputs = inputs
-        self.outputs = outputs
+    def __init__(self,mod_limit,micro_selection,inputs):
+        self.mod_limit = mod_limit
         self.micro_selection = micro_selection
-        self.update_trace_panel = update_trace_panel
-        self.path_to_interaction = path_to_interaction
-        self.algorithm=algorithm
-
-        self.mod_limit = int(round(mod_perc*(2*len(self.TS.states))))
-
-        self.setup_helper = SMTSetup()
-
-    def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
-        allowable_time = num_itr * 60
-
-        TS = self.TS.copy()
-        SMUtil().build(TS.transitions, TS.states)
-
-        all_trans = []
-        for source,temp in TS.transitions.items():
-            for target,conditions in temp.items():
-                for trans in conditions:
-                    all_trans.append(trans)
-
-        all_states = []
-        for _,state in TS.states.items():
-            all_states.append(state)
-
-        # create the lists to keep track of added states and removed transitions
-        added_states = []
-        removed_transitions = []
-        for state in all_states:
-            for inp in self.inputs.alphabet:
-                inp_exists = False
-                for trans in state.out_trans:
-                    if trans.condition == inp:
-                        inp_exists = True
-                if not inp_exists:
-                    new_trans = Transition(state.id, state.id, inp)
-                    new_trans.source = state
-                    new_trans.target = state
-                    removed_transitions.append(new_trans)
-
-        # set up the modification tracker dataset
-        mod_tracker = ModificationTracker(TS,self.inputs)
-
-        # setup LTL property checker
-        property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
-        Properties = property_module.Properties
-        property_checker = Properties(self.inputs, self.outputs)
-
-        # correctness trajectories to be returned
-        correctness_trajs = []
-
-        #for i in range(1, num_itr+1):
-        i=0
-        result = 0
-        while result < 1:
-
-            # calculate the initial reward
-            distance = self.TS.get_distance(TS)
-            sat_ratio = 1
-            path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
-            unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
-            print(unweighted_rew_vect)
-            print(probs_vect)
-            print(traj_status)
-            #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
-            reward_vect = unweighted_rew_vect
-            total_reward = sum(reward_vect)
-            precost = self.get_cost(reward_vect, distance)
-
-            accept_counter = 0
-            reject_counter = 0
-            TS_copy = TS.copy()
-            best_design = [TS_copy,[TS_copy.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions],sum(reward_vect), traj_status]
-            start_time = time.time()
-
-            # determine the maximum possible reward
-            max_possible_reward = 0
-            for traj in self.trajs:
-                max_possible_reward += max(0,traj.reward)
-
-            while True:
-
-                plot_data["rewards"].append(sum(reward_vect))
-                plot_data["progress"].append(best_design[2])
-                plot_data["cost"].append(precost)
-                plot_data["props"].append(sat_ratio)
-                plot_data["distances"].append(distance)
-                curr_time = time.time()
-                plot_data["time"].append(curr_time)
-
-                time_elapsed = curr_time - start_time
-                if time_elapsed > allowable_time or sum(reward_vect) == max_possible_reward:
-                    total_reward_plotter.update_graph(plot_data["rewards"])
-                    progress_plotter.update_graph(plot_data["progress"])
-                    cost_plotter.update_graph(plot_data["cost"])
-                    prop_plotter.update_graph(plot_data["props"])
-                    distance_plotter.update_graph(plot_data["distances"])
-                    break
-
-                undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
-
-                # calculate the reward
-                new_distance = self.TS.get_distance(TS)
-                path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
-                unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
-                #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
-                new_reward_vect = unweighted_rew_vect
-                total_reward = sum(new_reward_vect)
-                postcost = self.get_cost(new_reward_vect,distance)
-
-                alpha = min(1, math.exp(-0.1 * (postcost*1.0/precost)))
-                u = np.random.random()
-
-                # accept or reject
-                if u > alpha and self.algorithm=="mcmc":
-                    reject_counter += 1
-                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
-                else:
-                    accept_counter += 1
-                    precost = postcost
-                    reward_vect = new_reward_vect
-                    distance = new_distance
-
-                    # check if we have encountered the best design
-                    if total_reward >= best_design[2]:
-                        #print("BEST DESIGN!")
-                        best_design[0] = TS.copy()
-                        #best_design[1] = [trans for trans in removed_transitions]
-                        best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
-                        best_design[2] = total_reward
-                        best_design[3] = traj_status
-
-                if i%1000 == 0:
-                    print("itr {}".format(i))
-                i+=1
-
-            print("MCMC steps: {}".format(i))
-            SMUtil().build(best_design[0].transitions, best_design[0].states)
-            print(str(best_design[0]))
-            results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
-            result = sum(results)*1.0/len(results)
-            print("correctness property satisfaction: {}".format(result))
-            counter = 0
-            for counterexample in counterexamples:
-                if counterexample is not None:
-                    print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
-                    traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, counterexample[2], is_prefix=counterexample[1])
-                    # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
-                    #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
-                    self.trajs.append(traj)
-                    correctness_trajs.append(traj)
-                counter += 1
-
-            for traj in self.trajs:
-                print(traj.comparable_string())
-
-        plot_data["rewards"].append(total_reward)
-        total_reward_plotter.update_graph(plot_data["rewards"])
-
-        print("completed at itr {}".format(i))
-
-        end_time = time.time()
-
-        print("took {} seconds".format(end_time - start_time))
-        print("{} accepts, {} rejects".format(accept_counter, reject_counter))
-        print("checking reachability")
-
-        SMUtil().build(best_design[0].transitions, best_design[0].states)
-        st_reachable = {}
-        print(best_design[0])
-        for state in best_design[0].states.values():
-            rc = ReachabilityChecker(best_design[0], self.inputs, self.outputs, best_design[1])
-            st_reachable[state.name] = rc.check(self.setup_helper, state)
-            if st_reachable[state.name] == False:
-                print("state {} is unreachable".format(state.name))
-        path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
-        _,_,traj_status = path_traversal.check()
-        self.update_trace_panel(traj_status)
-        return best_design[0], st_reachable, correctness_trajs
+        self.inputs = inputs
 
     def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
         num_states = len(list(TS.states))
@@ -219,6 +27,9 @@ class MCMCAdapt:
         num_state_additions = 1
         num_state_deletions = num_added_states
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
+
+        print(self.mod_limit)
+        print(num_empties)
 
         options = [1,2,3,4,5,6]
         selection = np.random.choice(options, 1, p=[num_state_mods/sum_options,
@@ -317,7 +128,7 @@ class MCMCAdapt:
             micro = random.choice(self.micro_selection)
             state_name = self.get_unused_name(micro["name"], TS)
             #print("adding a state: {}".format(state_name))
-            state = State(state_name, self.get_unused_state_id(TS), [micro])
+            state = sm.State(state_name, self.get_unused_state_id(TS), [micro])
             #print("  {}".format(state.id))
 
             all_states.append(state)
@@ -332,7 +143,7 @@ class MCMCAdapt:
 
             transitions = []
             for inp in self.inputs.alphabet:
-                transition = Transition(state.id, state.id, inp)
+                transition = sm.Transition(state.id, state.id, inp)
                 transition.source = state
                 transition.source.out_trans.append(transition)
                 transition.target = state
@@ -562,32 +373,3 @@ class MCMCAdapt:
                 break
             count += 1
         return "{}{}".format(name,count)
-
-    def get_cost(self, reward_vect, distance):
-        R_neg = 0.01
-        R_pos = 0.01
-        for i in reward_vect:
-            if i < 0:
-                R_neg += abs(i)
-            elif i > 0:
-                R_pos += abs(i)
-
-        return (R_neg + 1/(R_pos))
-
-    def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
-        traj_vect = []
-        print(rawinput)
-        print(output_mapping)
-        for item in rawinput:
-            micro = None
-            for st_name, st in states.items():
-                if output_mapping[st_name] == item[1]:
-                    micro = st.micros[0]["name"]
-            traj_vect.append((HumanInput(self.inputs.rev_alphabet[item[0]]), Microinteraction(micro, 0)))
-            if micro == None:
-                print("ERROR: microinteraction name be None")
-                print(output_mapping)
-                print(item)
-                exit(1)
-
-        return Trajectory(traj_vect, reward, is_prefix, is_correctness=True)

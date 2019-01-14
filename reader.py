@@ -7,8 +7,9 @@ import pickle
 
 class Reader:
 
-    def __init__(self, filename):
+    def __init__(self, filename, io_dict):
         self.filename = filename
+        self.io_data = io_dict
 
     def build(self):
         tree = ET.parse(self.filename)
@@ -26,6 +27,7 @@ class Reader:
             for i in group.iterfind("micro"):
                 for j in i.iterfind("name"):
                     parameters = []
+                    param_dict = {}
                     for k in i.iterfind("parameter"):
                         name = k.text
                         type = k.attrib["type"]
@@ -33,8 +35,27 @@ class Reader:
                         globParam = Global(name, type)
                         globParam.val = val
                         parameters.append(globParam)
-                    microinteractions.append({"name": j.text,"params": parameters})
-                    micro_selection.append({"name": j.text,"params": parameters})
+                        param_dict[name] = val
+                    #microinteractions.append({"name": j.text,"params": parameters})
+                    #micro_selection.append({"name": j.text,"params": parameters})
+
+                    temp_dict = self.io_data["outputs"]
+                    selected_micro_type = None
+                    for micro_type in temp_dict:
+                        if temp_dict[micro_type]["micro"] == j.text:
+                            is_good = True
+                            for param in temp_dict[micro_type]["params"]:
+                                if param_dict[str(param)] != temp_dict[micro_type]["params"][param]:
+                                    is_good = False
+                                    break
+                            if is_good:
+                                selected_micro_type = micro_type
+                                microinteractions.append({"name": selected_micro_type,"params": parameters})
+                                micro_selection.append({"name": selected_micro_type,"params": parameters})
+                                break
+                    if selected_micro_type is None:
+                        print("ERROR: cannot find microinteraction instantiation")
+                        exit(1)
 
             new_state = State(group_name, id, microinteractions)
             states[group_name] = new_state
@@ -82,9 +103,13 @@ class TrajectoryReader:
         trajs = []
 
         with open(self.picklename, "rb") as infile:
-            raw_trajs = pickle.load(infile)
+            raw_trajs = pickle.load(infile, encoding='bytes')
 
             for raw_traj in raw_trajs:
+                _ = raw_traj.pop(-1) # end time
+                _ = raw_traj.pop(-1) # start time
+                _ = raw_traj.pop(-1) # date
+
                 is_correctness = raw_traj.pop(-1)
                 is_prefix = raw_traj.pop(-1)
                 score = raw_traj.pop(-1)

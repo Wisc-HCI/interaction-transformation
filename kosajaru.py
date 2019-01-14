@@ -54,8 +54,7 @@ class Kosajaru:
 
         return strong_sccs
 
-    def bfs(self,curr,dest,input_dict,trans_to_try,visited,curr_path,path_to_dest):
-
+    def bfs(self,curr,dest,input_dict,trans_to_try,visited_trans,curr_path,path_to_dest):
         if len(path_to_dest) > 0:
             return
 
@@ -64,7 +63,40 @@ class Kosajaru:
                 path_to_dest.append(item)
             return
 
+        # append to the list
+        for trans in curr.out_trans:
+            if trans not in visited_trans:
+                #trans_to_try.append((curr_path.copy(),trans))
+                trans_to_try.append((self.copy_path(curr_path),trans))
+
+        while len(trans_to_try)>0:
+            next_trans = trans_to_try.pop(0)
+            if next_trans in visited_trans:
+                continue
+            else:
+                visited_trans.append(next_trans)
+            next = next_trans[1].target
+            curr_path_copy = next_trans[0]
+            curr_path_copy.append((input_dict[next_trans[1].condition],int(next.id)))
+            return self.bfs(next,dest,input_dict,trans_to_try,visited_trans,curr_path_copy,path_to_dest)
+        '''
+
+        print("BEGINNING CALL: {},{}".format(curr,dest))
+        for v in visited:
+            print("   visited {}".format(v.name))
+
+        if len(path_to_dest) > 0:
+            print("path to dest is greater than 0, returning")
+            return
+
+        elif curr==dest:
+            for item in curr_path:
+                print("found dest, adding to the path to dest")
+                path_to_dest.append(item)
+            return
+
         elif curr in visited:
+            print("already visited curr {}".format(curr))
             return
 
         # put curr in visited
@@ -78,9 +110,12 @@ class Kosajaru:
         while len(trans_to_try)>0:
             next_trans = trans_to_try.pop(0)
             next = next_trans[1].target
+            print("visiting {} next".format(next))
             curr_path_copy = next_trans[0]
             curr_path_copy.append((input_dict[next_trans[1].condition],int(next.id)))
             return self.bfs(next,dest,input_dict,trans_to_try,visited,curr_path_copy,path_to_dest)
+
+        '''
 
     def bfs_scc(self, curr_state, dest, input_dict, trans_to_try, visited_trans, curr_path, path_to_dest):
 
@@ -123,6 +158,7 @@ class Kosajaru:
 
         self.bfs(init,root,input_dict,[],[],curr_path,path_to_dest)
         if len(path_to_dest) == 0:
+            print("no path to destination")
             return None
 
         # now that we have the path to dest, get a path through the scc

@@ -22,7 +22,7 @@ class Mutator:
         init = None
         transitions = {}
         for state_name,state in interaction.groups.items():
-            states[state_name] = sm.State(state.name,state.id,[{"name": state.micros[0].micro_type}])
+            states[state_name] = sm.State(state.name,state.id,[{"name": state.micros[0].micro_inst}])
             if interaction.init_group.name == state_name:
                 init = states[state_name]
 
@@ -96,7 +96,7 @@ class Mutator:
                 print("{} mutations attempted".format(mut_count))
 
             # verify the mutation
-            results, counterexamples, output_mapping = property_checker.compute_constraints(self.TS, setup_helper, removed_transitions)
+            results, counterexamples = property_checker.compute_constraints(self.TS, setup_helper, removed_transitions)
 
             if sum(results)*1.0/len(results) == 1.0:
                 break
