@@ -7,7 +7,9 @@
                                                             "use_gesture":"false",
                                                             "Allow_human_to_respond":"false"}
                         },
-             "Get": {"id":2,"micro":"Receive", "params":{}},
+             "Get": {"id":2,"micro":"Remark", "params":{"content":"Please find a short purple cylinder from the bag of blocks, and place it in the designated loading area. Then find a small green rectangle and place it on top of the purple cylinder. Finally, find a small yellow cylinder and place it to the right of the other cylinder.",
+                                                        "use_gesture":"true",
+                                                        "Allow_human_to_respond":"false"}},
              "Say_Bye": {"id":3,"micro":"Farewell", "params":{}},
              "AskIfOK": {"id":4,"micro":"Ask", "params":{"answers robot can recognize":{"Yes":"human_ready","No":"human_ignore"},
                                                          "question": "Do you need help?"}
