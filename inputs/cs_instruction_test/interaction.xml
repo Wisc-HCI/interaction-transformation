@@ -25,11 +25,13 @@
 	</group>
 
 	<group id="2" init="false" final="false" x="675.0" y="270.0">
-		<name>Accept</name>
+		<name>Direct</name>
 		<micro>
-			<name>Receive</name>
+			<name>Remark</name>
+			<parameter type="bool" val="Please find a short purple cylinder from the bag of blocks, and place it in the designated loading area. Then find a small green rectangle and place it on top of the purple cylinder. Finally, find a small yellow cylinder and place it to the right of the other cylinder.">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="false">Allow_human_to_respond</parameter>
 		</micro>
-
 	</group>
 
 	<group id="3" init="false" final="true" x="675.0" y="270.0">
@@ -57,19 +59,8 @@
 	<transition>
 		<source ref="2"/>
 		<target ref="3"/>
+		<guard condition="human_ready"/>
 		<guard condition="human_ignore"/>
-	</transition>
-
-	<transition>
-		<source ref="3"/>
-		<target ref="0"/>
-		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
-		<source ref="2"/>
-		<target ref="2"/>
-		<guard condition="human_ready"/>
 	</transition>
 
 	<design>Delivery</design>
