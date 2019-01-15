@@ -61,12 +61,6 @@
 	</transition>
 
 	<transition>
-		<source ref="3"/>
-		<target ref="0"/>
-		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
 		<source ref="2"/>
 		<target ref="2"/>
 		<guard condition="human_ready"/>
