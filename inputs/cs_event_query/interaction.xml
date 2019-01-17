@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nta>
+
+	<name>event_query_task</name>
+
+	<group id="0" init="true" final="false" x="182.0" y="134.0">
+		<name>Greet</name>
+		<micro>
+			<name>Greeter</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+	</group>
+
+	<group id="1" init="false" final="false" x="675.0" y="270.0">
+		<name>HowHelp</name>
+		<micro>
+			<name>Ask</name>
+			<parameter type="array">
+				<name>answers robot can recognize</name>
+				<item type="string" val="events" link="human_ready"/>
+				<item type="string" val="room reservations" link="human_ready"/>
+				<item type="string" val="food options" link="human_ready"/>
+			</parameter>
+			<parameter type="str" val="What information would you like to know? You can say events, room reservations, or food options.">question</parameter>
+		</micro>
+	</group>
+
+	<group id="2" init="false" final="false" x="675.0" y="270.0">
+		<name>DidNotGetThat</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="I'm sorry, I didn't catch what you said.">content</parameter>
+			<parameter type="bool" val="false">use_gesture</parameter>
+			<parameter type="bool" val="false">Allow_human_to_respond</parameter>
+		</micro>
+	</group>
+
+	<group id="3" init="false" final="false" x="675.0" y="270.0">
+		<name>CompleteQuery</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="bool" val="$CONTENT$">content</parameter>
+			<parameter type="bool" val="false">use_gesture</parameter>
+			<parameter type="bool" val="false">Allow_human_to_respond</parameter>
+		</micro>
+	</group>
+
+	<group id="4" init="false" final="true" x="675.0" y="270.0">
+		<name>Bye</name>
+		<micro>
+			<name>Farewell</name>
+		</micro>
+
+	</group>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="1"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="0"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="2"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="1"/>
+		<guard condition="human_ready"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="3"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_ready"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<design>Delivery</design>
+</nta>

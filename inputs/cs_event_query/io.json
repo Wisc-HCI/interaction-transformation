@@ -1,0 +1,53 @@
+{"inputs": {"Ready": 0, "Ignore": 1},
+ "outputs": {"Greet": {"id":0,"micro":"Greeter", "params":{"Greet_with_speech":"true",
+                                                            "Greet_with_handshake":"false",
+                                                            "Wait_for_response":"true"}
+                       },
+             "HowHelp": {"id":1,"micro":"Ask", "params":{"answers robot can recognize":{"events":"human_ready","room reservations":"human_ready", "food options":"human_ready"},
+                                                         "question": "What information would you like to know? You can say events, room reservations, or food options."}
+                        },
+             "DidNotGetThat": {"id":2,"micro":"Remark","params":{"content":"I'm sorry, I didn't catch what you said.",
+                                                                 "use_gesture":"false",
+                                                                 "Allow_human_to_respond":"false"}
+                        },
+             "CompeteQuery": {"id":3,"micro":"Remark","params":{"content":"$CONTENT$",
+                                                                "use_gesture":"false",
+                                                                "Allow_human_to_respond":"false"}
+                        },
+             "Bye": {"id":4,"micro":"Farewell","params":{}
+                        },
+             "AnswerQuery": {"id":5,"micro":"Answer","params":{"Introduction":"true"}
+                        },
+             "HowHelp": {"id":6,"micro":"Ask", "params":{"answers robot can recognize":{"Yes":"human_ready","No":"human_ignore"},
+                                                         "question": "Did you get that?"}
+                        },
+             "Instruction1": {"id":7,"micro":"Remark","params":{"content":"$CONTENT_PART1$",
+                                                                "use_gesture":"true",
+                                                                "Allow_human_to_respond":"false"}
+                        },
+             "Instruction2": {"id":8,"micro":"Remark","params":{"content":"$CONTENT_PART2$",
+                                                                "use_gesture":"true",
+                                                                "Allow_human_to_respond":"false"}
+                             },
+             "Instruction3": {"id":8,"micro":"Remark","params":{"content":"$CONTENT_PART3$",
+                                                                "use_gesture":"true",
+                                                                "Allow_human_to_respond":"false"}
+                             },
+             "Wait": {"id":9,"micro":"Wait","params":{"look_at_people":"false",
+                                                      "allow_speech":"true",
+                                                      "wait time (seconds)":"false"}
+                             },
+             "ListOut": {"id":10,"micro":"Remark","params":{"content":"$CONTENT_ALL$",
+                                                           "use_gesture":"true",
+                                                           "Allow_human_to_respond":"false"}
+                             },
+             "Anecdote": {"id":11,"micro":"Remark","params":{"content":"$ANECDOTE$",
+                                                             "use_gesture":"true",
+                                                             "Allow_human_to_respond":"false"}
+                             },
+             "HowAreYou": {"id":12,"micro":"Ask","params":{"answers robot can recognize":{"Good":"human_ready","Bad":"human_ignore"},
+                                                           "question": "How are you doing today?"}
+                             },
+            },
+ "mod_percent": 0.3,
+ "time_mcmc": 0.05}
