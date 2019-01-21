@@ -100,7 +100,7 @@ class Properties:
         negation_constraint = Or(False)
         for i in range(2*n-1):
             #negation_constraint = Or(negation_constraint, And(sts[i]>=0, f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
-            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Say_Bye"]))
+            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Bye"]))
 
         constraint = And(constraint, Not(negation_constraint))
 
@@ -112,7 +112,7 @@ class Properties:
         negation_constraint = Or(False)
         for i in range(2*n-1):
             #negation_constraint = Or(negation_constraint, And(sts[i]>=0, f_M(sts[i])==outputs["Farewell"], f_T(sts[i], inputs["Ready"])==-1, f_T(sts[i], inputs["Ignore"])==-1))
-            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Say_Bye"], sts[i+1]>=0))
+            negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Bye"], sts[i+1]>=0))
 
         constraint = And(constraint, negation_constraint)
 

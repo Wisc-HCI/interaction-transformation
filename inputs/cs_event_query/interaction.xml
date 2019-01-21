@@ -21,10 +21,10 @@
 			<parameter type="array">
 				<name>answers robot can recognize</name>
 				<item type="string" val="events" link="human_ready"/>
-				<item type="string" val="room reservations" link="human_ready"/>
-				<item type="string" val="food options" link="human_ready"/>
+				<item type="string" val="rooms" link="human_ready"/>
+				<item type="string" val="parking" link="human_ready"/>
 			</parameter>
-			<parameter type="str" val="What information would you like to know? You can say events, room reservations, or food options.">question</parameter>
+			<parameter type="str" val="What information would you like to know? You can say events, rooms, or parking.">question</parameter>
 		</micro>
 	</group>
 
@@ -45,6 +45,19 @@
 			<parameter type="bool" val="$CONTENT$">content</parameter>
 			<parameter type="bool" val="false">use_gesture</parameter>
 			<parameter type="bool" val="false">Allow_human_to_respond</parameter>
+		</micro>
+	</group>
+
+	<group id="5" init="false" final="false" x="675.0" y="270.0">
+		<name>NeedMoreHelp</name>
+		<micro>
+			<name>Ask</name>
+			<parameter type="array">
+				<name>answers robot can recognize</name>
+				<item type="string" val="Yes" link="human_ready"/>
+				<item type="string" val="No" link="human_ignore"/>
+			</parameter>
+			<parameter type="str" val="Do you have any more questions?">question</parameter>
 		</micro>
 	</group>
 
@@ -89,8 +102,20 @@
 
 	<transition>
 		<source ref="3"/>
-		<target ref="4"/>
+		<target ref="5"/>
 		<guard condition="human_ready"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="1"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="4"/>
 		<guard condition="human_ignore"/>
 	</transition>
 

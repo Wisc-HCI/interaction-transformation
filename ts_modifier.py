@@ -24,7 +24,7 @@ class TSModifier:
         num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
-        num_state_additions = 1
+        num_state_additions = 10 if num_mods < self.mod_limit else 0
         num_state_deletions = num_added_states
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
 

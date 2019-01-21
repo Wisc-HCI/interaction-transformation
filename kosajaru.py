@@ -10,10 +10,11 @@ class Kosajaru:
         if not visited[u]:
             visited[u] = True
             for trans in u.out_trans:
+                print("visiting -> {} from {}".format(trans.target.id,u.id))
                 self.visit(trans.target, visited, L)
             L.insert(0,u)
 
-    def assign(self,u,scc,sccs):
+    def assign(self,u,scc,sccs,L):
         exists = False
         for scc in sccs:
             if scc.is_member(u):
@@ -21,7 +22,8 @@ class Kosajaru:
         if not exists and not scc.is_member(u):
             scc.add(u)
             for trans in u.in_trans:
-                self.assign(trans.source,scc,sccs)
+                if trans.source in L:
+                    self.assign(trans.source,scc,sccs,L)
 
     def compute(self,inputs):
         sccs = []
@@ -35,6 +37,9 @@ class Kosajaru:
 
         #2
         self.visit(self.TS.init,visited,L)
+        print("VISITED")
+        for st in L:
+            print("  {}".format(st.id))
 
         #3
         for u in L:
@@ -44,13 +49,17 @@ class Kosajaru:
                     exists = True
             if not exists:
                 sccs.append(SCC(u))
-                self.assign(u,sccs[-1],sccs)
+                self.assign(u,sccs[-1],sccs,L)
 
         #4: find the strongest of the sccs
         strong_sccs = []
         for scc in sccs:
+            print("REGULAR SCC: {}".format(str(scc)))
             if scc.is_max_strong(inputs):
                 strong_sccs.append(scc)
+
+        print("STRONG SCCS")
+        print(strong_sccs)
 
         return strong_sccs
 
@@ -71,10 +80,10 @@ class Kosajaru:
 
         while len(trans_to_try)>0:
             next_trans = trans_to_try.pop(0)
-            if next_trans in visited_trans:
+            if next_trans[1] in visited_trans:
                 continue
             else:
-                visited_trans.append(next_trans)
+                visited_trans.append(next_trans[1])
             next = next_trans[1].target
             curr_path_copy = next_trans[0]
             curr_path_copy.append((input_dict[next_trans[1].condition],int(next.id)))
@@ -119,7 +128,6 @@ class Kosajaru:
 
     def bfs_scc(self, curr_state, dest, input_dict, trans_to_try, visited_trans, curr_path, path_to_dest):
 
-        print("start {}, dest ({},{}) ----- path: {}".format(curr_state.id,dest[0],dest[1].id,curr_path))
         if len(path_to_dest) > 0:
             return
 
@@ -140,10 +148,10 @@ class Kosajaru:
 
         while len(trans_to_try)>0:
             next_trans = trans_to_try.pop(0)
-            if next_trans in visited_trans:
+            if next_trans[1] in visited_trans:
                 continue
             else:
-                visited_trans.append(next_trans)
+                visited_trans.append(next_trans[1])
             next = next_trans[1].target
             curr_path_copy = next_trans[0]
             curr_path_copy.append((input_dict[next_trans[1].condition],int(next.id)))

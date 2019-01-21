@@ -8,7 +8,7 @@ import json
 
 from interaction_components import InputAlphabet, OutputAlphabet
 
-sys.path.append('../../../../../Repair/repair_algorithms/inputs/cs_handoff_task')
+sys.path.append('../../../../../interaction-adaptation/inputs/cs_event_query')
 import properties
 
 class Mutator:
@@ -43,10 +43,13 @@ class Mutator:
     def mutate(self, property_dir):
         mutation_accepted = False
 
-        json_raw=open("../../../../../Repair/repair_algorithms/inputs/cs_handoff_task/io.json")
+        json_raw=open("../../../../../interaction-adaptation/inputs/cs_event_query/io.json")
         json_data = json.load(json_raw)
         inputs = InputAlphabet(json_data)
-        outputs = OutputAlphabet(json_data)
+        raw_outputs = {"outputs": {}}
+        for output,output_data in json_data["outputs"].items():
+            raw_outputs["outputs"][output] = output_data["id"]
+        outputs = OutputAlphabet(raw_outputs)
         mod_limit = int(round(json_data["mod_percent"]*(2*len(self.TS.states))))
 
         all_trans = []
@@ -95,6 +98,8 @@ class Mutator:
             if mut_count>0 and mut_count%1000 == 0:
                 print("{} mutations attempted".format(mut_count))
 
+            print(self.TS)
+
             # verify the mutation
             results, counterexamples = property_checker.compute_constraints(self.TS, setup_helper, removed_transitions)
 
@@ -118,13 +123,13 @@ class Mutator:
                 g = (state.name,state.id,state.micros)
             if state == self.TS.init:
                 init_group = g
-            groups[group_name] = g
+            groups[state_name] = g
 
         # handle the transitions
         for source_id,temp in self.TS.transitions.items():
             for target_id,conds in temp.items():
                 conditions = []
-                for item in conditions:
+                for item in conds:
                     conditions.append("human_ready" if item.condition == "Ready" else "human_ignore")
                 if source_id not in transitions:
                     transitions[source_id] = {}
