@@ -21,10 +21,9 @@
 			<parameter type="array">
 				<name>answers robot can recognize</name>
 				<item type="string" val="events" link="human_ready"/>
-				<item type="string" val="rooms" link="human_ready"/>
 				<item type="string" val="parking" link="human_ready"/>
 			</parameter>
-			<parameter type="str" val="What information would you like to know? You can say events, rooms, or parking.">question</parameter>
+			<parameter type="str" val="What information would you like to know? You can say events, or parking.">question</parameter>
 		</micro>
 	</group>
 

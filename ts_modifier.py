@@ -40,8 +40,30 @@ class TSModifier:
                                                     num_state_deletions/sum_options])
 
         undoable = None
-        if selection == 1:    # modify existing state
-            undoable = (1, (None))
+        if selection == 1:    # swap existing state
+            undoable = (1,(None))
+
+            '''
+            state_to_swap = random.choice(all_states)
+
+            old_micro = state_to_swap.micros[0]
+            old_name = state_to_swap.name
+
+            while true:
+                new_micro = random.choice(self.micro_selection)
+                new_state_name = self.get_unused_name(micro["name"], TS)
+                if new_micro["name"] != old_micro["name"]:
+
+
+            state_to_swap.name = new_state_name
+            state_to_swap.micros = [new_micro]
+
+            # get the modified transitions
+            for trans in state_to_swap.inp_trans:
+                self.mod_tracker.update_mod_tracker(trans)
+
+            undoable = (1, (old_micro,old_name))
+            '''
         elif selection == 2:  # modify existing transition
 
             # randomly pick a transition

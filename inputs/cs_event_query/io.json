@@ -3,8 +3,8 @@
                                                             "Greet_with_handshake":"false",
                                                             "Wait_for_response":"true"}
                        },
-             "HowHelp": {"id":1,"micro":"Ask","content":"true", "params":{"answers robot can recognize":{"events":"human_ready","rooms":"human_ready", "parking":"human_ready"},
-                                                         "question": "What information would you like to know? You can say events, rooms, or parking."}
+             "HowHelp": {"id":1,"micro":"Ask","content":"true", "params":{"answers robot can recognize":{"events":"human_ready","parking":"human_ready"},
+                                                         "question": "What information would you like to know? You can say events, or parking."}
                         },
              "DidNotGetThat": {"id":2,"micro":"Remark","content":"false","params":{"content":"I'm sorry, I didn't catch what you said.",
                                                                  "use_gesture":"false",
@@ -29,13 +29,9 @@
                                                                 "use_gesture":"true",
                                                                 "Allow_human_to_respond":"false"}
                              },
-             "Instruction3": {"id":9,"micro":"Remark","content":"false","params":{"content":"$CONTENT_PART3$",
-                                                                "use_gesture":"true",
-                                                                "Allow_human_to_respond":"false"}
-                             },
              "Wait": {"id":10,"micro":"Wait","content":"false","params":{"look_at_people":"false",
                                                       "allow_speech":"true",
-                                                      "wait time (seconds)":"false"}
+                                                      "wait time (seconds)":"10"}
                              },
              "ListOut": {"id":11,"micro":"Remark","content":"false","params":{"content":"$CONTENT_ALL$",
                                                            "use_gesture":"true",
