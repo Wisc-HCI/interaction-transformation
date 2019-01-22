@@ -56,6 +56,7 @@ class Properties:
                 results.append(1)
                 counterexamples.append(None)
 
+        '''
         s = Solver()
         #print("Checking property 1...")
         sts3 = [Int("st_{}_3".format(i)) for i in range(2*n)]
@@ -92,7 +93,54 @@ class Properties:
             results.append(1)
             counterexamples.append(None)
 
+        s = Solver()
+        #print("Checking property 2...")
+        sts5 = [Int("st_{}_5".format(i)) for i in range(2*n+1)]
+        inps5 = [Int("inp_{}_5".format(i)) for i in range(2*n)]
+        path_constraint = setup_helper.counterexample(f_T, f_M, inps5, sts5, n, self.inputs, self.outputs, size=2*n+1)
+        s.add(And(self.liveness_constraint(f_T, f_M, n, self.inputs, self.outputs, self.micros, inps5, sts5),setup_constraints, path_constraint))
+        result = s.check()
+        if result == sat:
+            results.append(0)
+            m=s.model()
+            #print(m)
+            raw_trajectory = setup_helper.get_result(m,inps5,sts5,n)
+            counterexamples.append((raw_trajectory, False, self.outputs))
+            print("FOUND HOW HELP CONSTRAINT COUNTEREXAMPLE")
+        else:
+            results.append(1)
+            counterexamples.append(None)
+
         return results, counterexamples
+
+        '''
+        tup = (f_T,f_M,n)
+        self.get_counterexample(3,2*n,f_T,f_M,n,self.farewell_exists_constraint,setup_helper,setup_constraints,results,counterexamples)
+        self.get_counterexample(4,2*n+1,f_T,f_M,n,self.farewell_end_constraint,setup_helper,setup_constraints,results,counterexamples)
+        self.get_counterexample(5,2*n+1,f_T,f_M,n,self.liveness_constraint,setup_helper,setup_constraints,results,counterexamples)
+        self.get_counterexample(6,2*n+1,f_T,f_M,n,self.how_help_constraint,setup_helper,setup_constraints,results,counterexamples)
+        self.get_counterexample(7,2*n+1,f_T,f_M,n,self.need_more_help_constraint,setup_helper,setup_constraints,results,counterexamples)
+
+        return results, counterexamples
+
+    def get_counterexample(self, id, size, f_T, f_M, n, func, setup_helper, setup_constraints, results, counterexamples):
+        s = Solver()
+        #print("Checking property 2...")
+        sts5 = [Int("st_{}_{}".format(i,id)) for i in range(size)]
+        inps5 = [Int("inp_{}_{}".format(i,id)) for i in range(size-1)]
+        path_constraint = setup_helper.counterexample(f_T, f_M, inps5, sts5, n, self.inputs, self.outputs, size=size)
+        s.add(And(func(f_T, f_M, n, self.inputs, self.outputs, self.micros, inps5, sts5),setup_constraints, path_constraint))
+        result = s.check()
+        if result == sat:
+            results.append(0)
+            m=s.model()
+            #print(m)
+            raw_trajectory = setup_helper.get_result(m,inps5,sts5,n)
+            counterexamples.append((raw_trajectory, False, self.outputs))
+            print("FOUND HOW HELP CONSTRAINT COUNTEREXAMPLE")
+        else:
+            results.append(1)
+            counterexamples.append(None)
 
     def farewell_exists_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
         constraint = And(True)
@@ -115,5 +163,63 @@ class Properties:
             negation_constraint = Or(negation_constraint, And(sts[i]>=0,f_M(sts[i])==micros["Bye"], sts[i+1]>=0))
 
         constraint = And(constraint, negation_constraint)
+
+        return constraint
+
+    def liveness_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
+        '''
+        In the future we need: CompleteQuery, AnswerQuery, Instruction1&Instruction2, or ListOut
+        '''
+        constraint = And(True)
+
+        to_negate = Or(False)
+        for i in range(2*n-1):
+            to_negate = Or(to_negate, And(sts[i] >= 0, f_M(sts[i])==micros["CompleteQuery"]))
+            to_negate = Or(to_negate, And(sts[i] >= 0, f_M(sts[i])==micros["AnswerQuery"]))
+            to_negate = Or(to_negate, And(sts[i] >= 0, f_M(sts[i])==micros["Instruction1"]))
+            to_negate = Or(to_negate, And(sts[i] >= 0, f_M(sts[i])==micros["Instruction2"]))
+            to_negate = Or(to_negate, And(sts[i] >= 0, f_M(sts[i])==micros["ListOut"]))
+
+        constraint = And(constraint, Not(to_negate))
+
+        return constraint
+
+    def how_help_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
+        '''
+        After asking how we can help them, in the future we need: CompleteQuery or ListOut
+        '''
+        constraint = And(True)
+
+        to_negate = And(True)
+        for i in range(2*n-1):
+            temp_or = Or(False)
+            for j in range(i+1, 2*n-1):
+                temp_or = Or(temp_or, And(sts[j] >= 0, Or(f_M(sts[j])==micros["CompleteQuery"],
+                                                          f_M(sts[j])==micros["ListOut"])))
+            to_negate = And(to_negate, Implies(And(sts[i] >= 0,f_M(sts[i])==micros["HowHelp"]), temp_or))
+
+        constraint = And(constraint, Not(to_negate))
+
+        return constraint
+
+    def need_more_help_constraint(self, f_T, f_M, n, inputs, outputs, micros, inps, sts):
+        '''
+        After asking if they need more help, in the future we need:
+        CompleteQuery, AnswerQuery, Instruction1&Instruction2, or ListOut
+        '''
+        constraint = And(True)
+
+        to_negate = And(True)
+        for i in range(2*n-1):
+            temp_or = Or(False)
+            for j in range(i+1, 2*n-1):
+                temp_or = Or(temp_or, And(sts[j] >= 0, Or(f_M(sts[j])==micros["CompleteQuery"],
+                                                          f_M(sts[j])==micros["Instruction1"],
+                                                          f_M(sts[j])==micros["Instruction2"],
+                                                          f_M(sts[j])==micros["AnswerQuery"],
+                                                          f_M(sts[j])==micros["ListOut"])))
+            to_negate = And(to_negate, Implies(And(sts[i] >= 0,f_M(sts[i])==micros["NeedMoreHelp"]), temp_or))
+
+        constraint = And(constraint, Not(to_negate))
 
         return constraint
