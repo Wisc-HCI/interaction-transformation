@@ -152,7 +152,6 @@ class MCMCAdapt:
                 if time.time() - time_start > allowable_time:
                     with open("plot_data.pkl", "wb") as fp:
                         pickle.dump(plot_data["progress"], fp)
-                    exit()
                     total_reward_plotter.update_graph(plot_data["rewards"])
                     progress_plotter.update_graph(plot_data["progress"])
                     cost_plotter.update_graph(plot_data["cost"])
