@@ -17,7 +17,7 @@ class Solver():
 
     def solve(self,TS,removed_transitions):
 
-        self.MAX_STATES = len(TS.states) + self.max_mods
+        self.MAX_STATES = len(TS.states) #+self.max_mods
 
         print("SOLVER --> setting up problem")
 
@@ -82,9 +82,11 @@ class Solver():
         I = Int('I')
 
         constraints = And(setup_constraints,self.make_constraints(TS,Mods,B, n, f_T, f_T_e, f_M, I))
+        #constraints = And(setup_constraints)
         objective = 0
+        print("SOLVER --> num trajs: {}".format(len(self.trajs)))
         for traj in self.trajs:
-            print(self.score[traj])
+            #print(self.score[traj])
             objective += B[traj] * self.score[traj]
 
         print(objective)
@@ -92,7 +94,7 @@ class Solver():
         print("SOLVER --> setting up optimization problem")
         o = Optimize()
         o.add(constraints)
-        h = o.maximize(objective)
+        h = o.minimize(objective)
 
         print("SOLVER --> solving")
         start_time = time.time()
@@ -100,11 +102,13 @@ class Solver():
         curr_time = time.time()
         print("SOLVER --> done solving -- {} seconds".format(curr_time - start_time))
 
+        objective_val = None
         if satisfaction == sat:
 
-            o.upper(h)
+            o.lower(h)
             m = o.model()
             print(m)
+            objective_val = float(int(str(m.evaluate(objective).numerator()))*1.0/int(str(m.evaluate(objective).denominator())))
 
         else:
             print("ERROR: no solution")
@@ -114,7 +118,7 @@ class Solver():
         curr_time = time.time()
         print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
         print("SOLVER --> returning solution")
-        return solution
+        return solution,objective_val
 
     def make_constraints(self, TS, Mods, B, n, f_T, f_T_e, f_M, I):
         constraints = And(True)
@@ -153,11 +157,22 @@ class Solver():
                 traj_micro = And(traj_micro, f_M(sts[i])==self.outputs[traj.vect[i][1].type])
 
                 # set the end state
+                '''
                 if i == len(traj.vect)-1 and not traj.is_prefix:
                     end_constraint = Or(False)
                     for inp in self.inputs:
                         end_constraint = Or(end_constraint, f_T(sts[i],self.inputs[inp])==-1)
                     traj_constraint = And(traj_constraint,end_constraint)
+                '''
+                # additional constraints not in MCMC
+                end_constraint = And(True)
+                for inp in self.inputs:
+                    end_constraint = And(end_constraint,Implies(And(f_M(sts[i])==self.outputs["Bye"],sts[i]>-1),
+                                                                f_T(sts[i],self.inputs[inp])==-1))
+                    end_constraint = And(end_constraint,Implies(And(f_M(sts[i])!=self.outputs["Bye"],sts[i]>-1),
+                                                                f_T(sts[i],self.inputs[inp])>-1))
+
+                traj_constraint = And(traj_constraint,end_constraint)
 
             constraints = And(constraints, Or(B[traj]==0,B[traj]==1))
             constraints = And(constraints, Implies(And(traj_constraint,traj_micro),B[traj]==1))
@@ -165,35 +180,8 @@ class Solver():
             constraints = And(constraints, Implies(Not(And(traj_constraint,traj_micro)),B[traj]==0))
             constraints = And(constraints, Implies(B[traj]==0,Not(And(traj_constraint,traj_micro))))
 
-        # force outputs leading to a state to be the same (thus, states correspond with the robot's output)
-        combos = []
-        inputs = list(self.inputs.keys())
-        for inp in range(self.MAX_STATES):
-            for inp_string in inputs:
-                combos.append((inp,inp_string))
-
-        '''
-        for i in range(len(combos)):
-            for j in range(i, len(combos)):
-                inp1 = combos[i][0]
-                sig1 = self.inputs[combos[i][1]]
-                inp2 = combos[j][0]
-                sig2 = self.inputs[combos[j][1]]
-                constraints = And(constraints,
-                                       Implies(f_T(inp1,sig1)==f_T(inp2,sig2),
-                                               f_A(inp1,sig1)==f_A(inp2,sig2)),
-                                              f_M(f_T(inp1,sig1))==f_A(inp2,sig2))
-        '''
-
         constraints = And(constraints,f_M(0)==0)
 
-        '''
-		#the results of f_A should never be below 0 or above len(omega)
-        for st in range(5):
-            for inp in self.inputs:
-                constraints = And(constraints, f_A(st,self.inputs[inp])>=0)
-                constraints = And(constraints, f_A(st,self.inputs[inp])<len(self.outputs))
-        '''
         # the results of f_M should never be below 0 or above len(outputs)
         for st in range(self.MAX_STATES):
             constraints = And(constraints, f_M(st)>=0)
@@ -247,6 +235,7 @@ class Solver():
                 src_name = self.rev_outputs[int(str(src_name))]   # string
 
                 tar_name = m.evaluate(f_M(target))
+                print(self.rev_outputs)
                 tar_name = "-1" if target == -1 else self.rev_outputs[int(str(tar_name))]   # string
 
                 io = (state, src_name, inp, target, tar_name)

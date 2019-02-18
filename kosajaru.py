@@ -10,7 +10,7 @@ class Kosajaru:
         if not visited[u]:
             visited[u] = True
             for trans in u.out_trans:
-                print("visiting -> {} from {}".format(trans.target.id,u.id))
+                #print("visiting -> {} from {}".format(trans.target.id,u.id))
                 self.visit(trans.target, visited, L)
             L.insert(0,u)
 
@@ -37,9 +37,9 @@ class Kosajaru:
 
         #2
         self.visit(self.TS.init,visited,L)
-        print("VISITED")
-        for st in L:
-            print("  {}".format(st.id))
+        #print("VISITED")
+        #for st in L:
+        #    print("  {}".format(st.id))
 
         #3
         for u in L:
@@ -54,12 +54,12 @@ class Kosajaru:
         #4: find the strongest of the sccs
         strong_sccs = []
         for scc in sccs:
-            print("REGULAR SCC: {}".format(str(scc)))
+            #print("REGULAR SCC: {}".format(str(scc)))
             if scc.is_max_strong(inputs):
                 strong_sccs.append(scc)
 
-        print("STRONG SCCS")
-        print(strong_sccs)
+        #print("STRONG SCCS")
+        #print(strong_sccs)
 
         return strong_sccs
 
@@ -128,13 +128,23 @@ class Kosajaru:
 
     def bfs_scc(self, curr_state, dest, input_dict, trans_to_try, visited_trans, curr_path, path_to_dest):
 
+        print("curr state: {}".format(curr_state))
         if len(path_to_dest) > 0:
             return
 
         dest_is_reachable = False
+        if curr_state == dest[0]:
+            print("is reachable!")
+            dest_is_reachable = True
+
+        # prior to mods
+        '''
         for trans in curr_state.out_trans:
             if input_dict[trans.condition] == dest[0] and trans.target == dest[1]:
                 dest_is_reachable = True
+        '''
+        #
+
         if dest_is_reachable:
             for item in curr_path:
                 path_to_dest.append(item)
@@ -174,14 +184,75 @@ class Kosajaru:
         to_remove = []
         path_post_root = []
         curr = root
+
+        # here is the kosa rewrite
+        for state in scc.vertices:
+            for trans in state.out_trans:
+                to_remove.append((state, input_dict[trans.condition]))
+
+        tup = (input_dict[root.out_trans[0].condition],root.out_trans[0].target)
+
+        path_post_root.append((tup[0],int(tup[1].id)))
+        to_remove.remove((root,tup[0]))
+        #print("next: {}".format(path_post_root))
+        curr = tup[1]
+        print(root.name)
+        for item in to_remove:
+            print("state {} - out {}".format(item[0].name, item[1]))
+
+        while len(to_remove) > 0:
+            # randomly select a transition to take
+            trans_tup = random.choice(to_remove)
+            print("   destination -- state {}, out {}".format(trans_tup[0].id,trans_tup[1]))
+
+            curr_path = []
+            path_from_curr_to_next = []
+            self.bfs_scc(curr,trans_tup,input_dict,[],[],curr_path,path_from_curr_to_next)
+            print("found {}".format(path_from_curr_to_next))
+
+            # must now append the trans tup
+            final_trans = None
+            for output in trans_tup[0].out_trans:
+                if input_dict[output.condition] == trans_tup[1]:
+                    final_trans = output
+            final_tup = (trans_tup[1],int(final_trans.target.id))
+
+            path_from_curr_to_next.append(final_tup)
+            curr = final_trans.target
+            print("updated found: {}".format(path_from_curr_to_next))
+
+            for i in range(0,len(path_from_curr_to_next)):
+                print("iterating, finding what to remove")
+                if i == 0:
+                    starter_state = path_post_root[-1][1]
+                else:
+                    starter_state = path_from_curr_to_next[i-1][1]
+                state_output = path_from_curr_to_next[i][0]
+                if starter_state in self.TS.id2state:
+                    tup_to_remove = (self.TS.id2state[starter_state],state_output)
+                else:
+                    for state_name,state in self.TS.states.items():
+                        if state.id == str(starter_state):
+                            tup_to_remove = (state,state_output)
+                if tup_to_remove in to_remove:
+                    print("removing {}".format(tup_to_remove))
+                    to_remove.remove(tup_to_remove)
+
+            #print("further: {}".format(path_from_curr_to_next))
+            path_post_root += path_from_curr_to_next
+
+        return path + path_post_root
+        '''
         for state in scc.vertices:
             for trans in state.in_trans:
                 to_remove.append((input_dict[trans.condition],state))
         tup = (input_dict[root.out_trans[0].condition],root.out_trans[0].target)
         path_post_root.append((tup[0],int(tup[1].id)))
         to_remove.remove(tup)
-        print("next: {}".format(path_post_root))
+        #print("next: {}".format(path_post_root))
         curr = tup[1]
+        for item in to_remove:
+            print("{}-{}".format(item[0], item[1].name))
 
         while len(to_remove) > 0:
             # randomly select a transition to take
@@ -204,11 +275,11 @@ class Kosajaru:
                 if tup_to_remove in to_remove:
                     to_remove.remove(tup_to_remove)
 
-            print("further: {}".format(path_from_curr_to_next))
+            #print("further: {}".format(path_from_curr_to_next))
             path_post_root += path_from_curr_to_next
 
         return path + path_post_root
-
+        '''
     def copy_path(self,path):
         new_path = []
 

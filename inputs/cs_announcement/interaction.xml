@@ -7,9 +7,9 @@
 		<name>Arrive</name>
 		<micro>
 			<name>Wait</name>
-			<parameter type="bool" val="true">Greet_with_speech</parameter>
-			<parameter type="bool" val="false">Greet_with_handshake</parameter>
-			<parameter type="bool" val="true">Wait_for_response</parameter>
+			<parameter type="bool" val="false">look_at_people</parameter>
+			<parameter type="bool" val="true">allow_speech</parameter>
+			<parameter type="bool" val="false">wait time (seconds)</parameter>
 		</micro>
 
 	</group>
@@ -18,15 +18,10 @@
 		<name>Announcement</name>
 		<micro>
 			<name>Remark</name>
+			<parameter type="str" val="Test content">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
 		</micro>
-	</group>
-
-	<group id="4" init="false" final="false" x="675.0" y="270.0">
-		<name>Wait_For_Action</name>
-		<micro>
-			<name>Wait</name>
-		</micro>
-
 	</group>
 
 	<group id="5" init="false" final="true" x="675.0" y="270.0">
@@ -46,7 +41,7 @@
 
 	<transition>
 		<source ref="3"/>
-		<target ref="4"/>
+		<target ref="5"/>
 		<guard condition="human_ready"/>
 	</transition>
 
@@ -56,12 +51,6 @@
 		<guard condition="human_ignore"/>
 	</transition>
 
-	<transition>
-		<source ref="4"/>
-		<target ref="5"/>
-		<guard condition="human_ready"/>
-		<guard condition="human_ignore"/>
-	</transition>
 
 	<design>Delivery</design>
 </nta>

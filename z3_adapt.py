@@ -64,11 +64,15 @@ class Z3Adapt:
                     orig_removed_transitions.append(new_trans)
 
         result = 0
-        while result < 1:
+        #while result < 1:
+        perf_idx = 0
+        start_time = time.time()
+        while perf_idx < 1:
+            perf_idx = 1
 
             # call the adapter
             s = synth.Solver(self.trajs,self.inputs,self.outputs,self.mod_limit)
-            solution = s.solve(self.TS,orig_removed_transitions)
+            solution,objective_val = s.solve(self.TS,orig_removed_transitions)
             net = {}
             for tup in solution.results:
                 if tup[0] not in net:
@@ -117,7 +121,9 @@ class Z3Adapt:
                         new_trans.source = state
                         new_trans.target = state
                         removed_transitions.append(new_trans)
-
+            end_time = time.time()
+            with open("out.csv", "w") as fp:
+                fp.write("{}, {}".format(end_time-start_time,objective_val))
             # get counterexamples
             results, counterexamples = property_checker.compute_constraints(new_TS, self.setup_helper, removed_transitions)
             result = sum(results)*1.0/len(results)
@@ -133,6 +139,8 @@ class Z3Adapt:
                     correctness_trajs.append(traj)
                 counter += 1
 
+        exit()
+
         #plot_data["rewards"].append(total_reward)
         #total_reward_plotter.update_graph(plot_data["rewards"])
 
@@ -143,7 +151,7 @@ class Z3Adapt:
         for state in new_TS.states.values():
             print(state.name)
             rc = ReachabilityChecker(new_TS, self.inputs, self.outputs, removed_transitions)
-            st_reachable[state.name] = rc.check(self.setup_helper, state)
+            st_reachable[state.name] = True #rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(new_TS, self.trajs, self.freqs, removed_transitions)

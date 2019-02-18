@@ -52,6 +52,16 @@ class App(QMainWindow):
         self.resized.connect(self.resizeWindow)
         self.initUI()
         self.show()
+        '''
+
+        if self.algorithm == "mcmc":
+            print("running mcmc")
+            self.mcmc_adapt()
+        elif self.algorithm == "random":
+            self.random_adapt()
+        elif self.algorithm == "smt":
+            self.z3_adapt()
+        '''
 
     def resizeEvent(self, event):
         self.resized.emit()

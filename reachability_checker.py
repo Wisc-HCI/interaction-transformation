@@ -53,7 +53,7 @@ class ReachabilityChecker:
 
         temp_constraint = And(False)
         for i in range(len(sts)):
-            temp_constraint = Or(temp_constraint, sts[i]==self.outputs[state.name])
+            temp_constraint = Or(temp_constraint, f_M(sts[i])==self.micros[state.name])
 
         traj_constraints = And(traj_constraints, temp_constraint)
 

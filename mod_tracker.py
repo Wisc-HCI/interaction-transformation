@@ -42,13 +42,18 @@ class ModificationTracker:
                         sum += 1
         return sum
 
-    def get_mod_tracker_nonempty_trans(self):
+    def get_mod_tracker_nonempty_trans(self, removed_transitions):
         trans_mods = []
         for item in self.mod_tracker:
             if self.mod_tracker[item][0] == 1:
                 for trans in item[0].out_trans:
                     if trans.condition == item[1]:
-                        trans_mods.append(trans)
+                        exists_in_removed = False
+                        for rtrans in removed_transitions:
+                            if trans.source == rtrans.source and trans.condition == rtrans.condition:
+                                exists_in_removed = True
+                        if not exists_in_removed:
+                            trans_mods.append(trans)
         return trans_mods
 
     def get_mod_tracker_empty_trans(self, removed_transitions):

@@ -115,15 +115,15 @@ class Properties:
 
         '''
         tup = (f_T,f_M,n)
-        self.get_counterexample(3,2*n,f_T,f_M,n,self.farewell_exists_constraint,setup_helper,setup_constraints,results,counterexamples)
-        self.get_counterexample(4,2*n+1,f_T,f_M,n,self.farewell_end_constraint,setup_helper,setup_constraints,results,counterexamples)
-        self.get_counterexample(5,2*n+1,f_T,f_M,n,self.liveness_constraint,setup_helper,setup_constraints,results,counterexamples)
-        self.get_counterexample(6,2*n+1,f_T,f_M,n,self.how_help_constraint,setup_helper,setup_constraints,results,counterexamples)
-        self.get_counterexample(7,2*n+1,f_T,f_M,n,self.need_more_help_constraint,setup_helper,setup_constraints,results,counterexamples)
+        self.get_counterexample(3,2*n,f_T,f_M,n,self.farewell_exists_constraint,setup_helper,setup_constraints,results,counterexamples, "farewell exists")
+        self.get_counterexample(4,2*n+1,f_T,f_M,n,self.farewell_end_constraint,setup_helper,setup_constraints,results,counterexamples, "farewell end")
+        self.get_counterexample(5,2*n+1,f_T,f_M,n,self.liveness_constraint,setup_helper,setup_constraints,results,counterexamples, "liveness")
+        self.get_counterexample(6,2*n+1,f_T,f_M,n,self.how_help_constraint,setup_helper,setup_constraints,results,counterexamples, "how help")
+        self.get_counterexample(7,2*n+1,f_T,f_M,n,self.need_more_help_constraint,setup_helper,setup_constraints,results,counterexamples, "need more help")
 
         return results, counterexamples
 
-    def get_counterexample(self, id, size, f_T, f_M, n, func, setup_helper, setup_constraints, results, counterexamples):
+    def get_counterexample(self, id, size, f_T, f_M, n, func, setup_helper, setup_constraints, results, counterexamples, label):
         s = Solver()
         #print("Checking property 2...")
         sts5 = [Int("st_{}_{}".format(i,id)) for i in range(size)]
@@ -137,7 +137,8 @@ class Properties:
             #print(m)
             raw_trajectory = setup_helper.get_result(m,inps5,sts5,n)
             counterexamples.append((raw_trajectory, False, self.outputs))
-            print("FOUND HOW HELP CONSTRAINT COUNTEREXAMPLE")
+            print("FOUND {} CONSTRAINT COUNTEREXAMPLE".format(label))
+            print("   ~~~   {}".format(raw_trajectory))
         else:
             results.append(1)
             counterexamples.append(None)

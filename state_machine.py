@@ -89,6 +89,8 @@ class TS(object):
 
         if trans_to_return is None:
             exit(1)
+        if trans_to_return.source is None:
+            exit(1)
         return trans_to_return
 
 

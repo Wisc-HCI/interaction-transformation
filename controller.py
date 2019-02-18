@@ -9,6 +9,7 @@ from json_exporter import *
 from verification.prism_util import *
 from reader import *
 import util
+import pickle
 
 class Controller:
 
@@ -36,14 +37,32 @@ class Controller:
 
         # read in arrays, form trajectories
         self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
-        '''
+
         # generate FAKE sample traces
-        tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
-        TraceGenerator = tracegen_module.TraceGenerator
-        tracegen = TraceGenerator(self.TS)
-        self.trajs = tracegen.get_trajectories(10)
-        '''
+        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
+        #    self.trajs = pickle.load(fp)
+        #tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
+        #TraceGenerator = tracegen_module.TraceGenerator
+        #tracegen = TraceGenerator(self.TS)
+        #self.trajs = self.trajs + tracegen.get_trajectories(100)
+        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
+        #    pickle.dump(self.trajs,fp)
         self.consolidate_trajectories()
+
+        '''
+        print("\n\n\n")
+        for traj in self.trajs:
+            print(traj)
+        print("\nTRAJ DICT\n")
+        for key,val in self.consolidated_traj_dict.items():
+            print("{}     -     {}".format(key,val))
+        print("\nNEW TRAJS\n")
+        for traj in self.consolidated_trajs:
+            print(traj)
+
+        exit()
+        '''
+
 
         # add default microinteractions not already in micro_selection
         for micro in self.outputs.alphabet:
@@ -73,9 +92,22 @@ class Controller:
 
         #for i in range(2):
         #print("Day {}".format(i))
+
+        print("STARTING INTERACTION")
+        print(self.TS)
         mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm)
         self.TS, st_reachables, correctness_trajs = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
+
+        with open("trajectories_used_for_learning.pkl", "wb") as fp:
+            pickle.dump(self.consolidated_trajs, fp)
+        with open("trajectories.pkl", "wb") as fp:
+            pickle.dump(self.trajs, fp)
+        with open("correctness_trajs.pkl", "wb") as fp:
+            pickle.dump(correctness_trajs, fp)
+
+        #with open("TS.txt", "wb") as fp:
+        #    fp.write(self.TS)
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
 

@@ -21,10 +21,9 @@
 			<parameter type="array">
 				<name>answers robot can recognize</name>
 				<item type="string" val="events" link="human_ready"/>
-				<item type="string" val="rooms" link="human_ready"/>
 				<item type="string" val="parking" link="human_ready"/>
 			</parameter>
-			<parameter type="str" val="What information would you like to know? You can say events, rooms, or parking.">question</parameter>
+			<parameter type="str" val="What information would you like to know? You can say events, or parking.">question</parameter>
 		</micro>
 	</group>
 
@@ -48,19 +47,6 @@
 		</micro>
 	</group>
 
-	<group id="5" init="false" final="false" x="675.0" y="270.0">
-		<name>NeedMoreHelp</name>
-		<micro>
-			<name>Ask</name>
-			<parameter type="array">
-				<name>answers robot can recognize</name>
-				<item type="string" val="Yes" link="human_ready"/>
-				<item type="string" val="No" link="human_ignore"/>
-			</parameter>
-			<parameter type="str" val="Do you have any more questions?">question</parameter>
-		</micro>
-	</group>
-
 	<group id="4" init="false" final="true" x="675.0" y="270.0">
 		<name>Bye</name>
 		<micro>
@@ -69,9 +55,17 @@
 
 	</group>
 
+	<group id="5" init="false" final="true" x="675.0" y="270.0">
+			<name>Bye2</name>
+			<micro>
+				<name>Farewell</name>
+			</micro>
+
+	</group>
+
 	<transition>
 		<source ref="0"/>
-		<target ref="1"/>
+		<target ref="3"/>
 		<guard condition="human_ready"/>
 	</transition>
 
@@ -96,26 +90,37 @@
 
 	<transition>
 		<source ref="1"/>
-		<target ref="3"/>
+		<target ref="2"/>
 		<guard condition="human_ready"/>
 	</transition>
 
 	<transition>
 		<source ref="3"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_ready"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
 		<target ref="5"/>
 		<guard condition="human_ready"/>
-		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="3"/>
+		<guard condition="human_ready"/>
 	</transition>
 
 	<transition>
 		<source ref="5"/>
 		<target ref="1"/>
-		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
-		<source ref="5"/>
-		<target ref="4"/>
 		<guard condition="human_ignore"/>
 	</transition>
 

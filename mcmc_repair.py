@@ -3,6 +3,7 @@ import time
 import numpy as np
 import threading
 import importlib
+import pickle
 
 from state_machine import *
 from path_traversal import *
@@ -27,11 +28,17 @@ class MCMCAdapt:
         self.algorithm=algorithm
 
         self.mod_limit = int(round(mod_perc*(2*len(self.TS.states))))
+        #self.mod_limit = int(round(mod_perc*(14)))
 
         self.setup_helper = SMTSetup()
 
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
-        allowable_time = num_itr * 60
+        start_time = time.time()
+
+        #allowable_time = num_itr
+        #allowable_time = 319.91643850803376
+        #allowable_time = 98.7957421541214
+        allowable_time = 0.18487918376922607
 
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
@@ -75,7 +82,29 @@ class MCMCAdapt:
         #for i in range(1, num_itr+1):
         i=0
         result = 0
-        while result < 1:
+
+        # we cap the time at 12 hours
+        lowbound_time = time.time()
+        best_result = -1
+        overall_best_design = [TS,[TS.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]]
+        break_time = 36000
+        #while result < 1:
+        perf_idx = 0
+        time_start = time.time()
+        while perf_idx < 1:
+            perf_idx = 1
+
+            # have an exit if needed
+            if time.time() - lowbound_time >= break_time: #43200
+                best_design[0] = overall_best_design[0]
+                #best_design[1] = [trans for trans in removed_transitions]
+                best_design[1] = overall_best_design[1]
+                SMUtil().build(best_design[0].transitions, best_design[0].states)
+                print("\nbreaking due to timeout")
+                print("sat ratio: {}".format(best_result))
+                print("TS:")
+                print(str(best_design[0]))
+                break
 
             # calculate the initial reward
             distance = self.TS.get_distance(TS)
@@ -87,6 +116,7 @@ class MCMCAdapt:
             print(traj_status)
             #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
             reward_vect = unweighted_rew_vect
+            print("rew vect post correctness: {}".format(reward_vect))
             total_reward = sum(reward_vect)
             precost = self.get_cost(reward_vect, distance)
 
@@ -94,14 +124,20 @@ class MCMCAdapt:
             reject_counter = 0
             TS_copy = TS.copy()
             best_design = [TS_copy,[TS_copy.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions],sum(reward_vect), traj_status]
-            start_time = time.time()
 
             # determine the maximum possible reward
             max_possible_reward = 0
             for traj in self.trajs:
                 max_possible_reward += max(0,traj.reward)
 
+            miter = 0
+
+            # we want to cap the time at 12 hours
             while True:
+
+                # have an exit if needed
+                if time.time() - lowbound_time >= break_time: #43200
+                    break
 
                 plot_data["rewards"].append(sum(reward_vect))
                 plot_data["progress"].append(best_design[2])
@@ -111,8 +147,12 @@ class MCMCAdapt:
                 curr_time = time.time()
                 plot_data["time"].append(curr_time)
 
-                time_elapsed = curr_time - start_time
-                if time_elapsed > allowable_time or sum(reward_vect) == max_possible_reward:
+                #time_elapsed = curr_time - start_time
+                #if miter > allowable_time or sum(reward_vect) == max_possible_reward:
+                if time.time() - time_start > allowable_time:
+                    with open("plot_data.pkl", "wb") as fp:
+                        pickle.dump(plot_data["progress"], fp)
+                    exit()
                     total_reward_plotter.update_graph(plot_data["rewards"])
                     progress_plotter.update_graph(plot_data["progress"])
                     cost_plotter.update_graph(plot_data["cost"])
@@ -153,15 +193,27 @@ class MCMCAdapt:
                         best_design[2] = total_reward
                         best_design[3] = traj_status
 
-                if i%1000 == 0:
+                if i%5000 == 0:
                     print("itr {}".format(i))
                 i+=1
+
+                miter += 1
 
             print("MCMC steps: {}".format(i))
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print(str(best_design[0]))
             results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
+
+            if result >= best_result:
+                best_result = result
+                overall_best_design[0] = best_design[0].copy()
+                #best_design[1] = [trans for trans in removed_transitions]
+                print(best_design[1])
+                for trans in best_design[1]:
+                    print(str(trans))
+                overall_best_design[1] = [overall_best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in best_design[1]]
+
             print("correctness property satisfaction: {}".format(result))
             counter = 0
             for counterexample in counterexamples:
@@ -174,11 +226,16 @@ class MCMCAdapt:
                     correctness_trajs.append(traj)
                 counter += 1
 
-            for traj in self.trajs:
-                print(traj.comparable_string())
+            print("rew vect pre correctness: {}".format(reward_vect))
+
+            #for traj in self.trajs:
+            #    print(traj.comparable_string())
 
         plot_data["rewards"].append(total_reward)
         total_reward_plotter.update_graph(plot_data["rewards"])
+
+        with open("plot_data.pkl", "wb") as outfile:
+            pickle.dump(plot_data, outfile)
 
         print("completed at itr {}".format(i))
 
@@ -193,12 +250,20 @@ class MCMCAdapt:
         print(best_design[0])
         for state in best_design[0].states.values():
             rc = ReachabilityChecker(best_design[0], self.inputs, self.outputs, best_design[1])
-            st_reachable[state.name] = rc.check(self.setup_helper, state)
+            st_reachable[state.name] = True #rc.check(self.setup_helper, state)
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         _,_,traj_status = path_traversal.check()
         self.update_trace_panel(traj_status)
+
+        # output a pickle file with more traj status
+        traj_status_pickle = {}
+        for traj in traj_status:
+            traj_status_pickle[str(traj)] = traj_status[traj]
+        with open("traj_status.pkl", "wb") as fp:
+            pickle.dump(traj_status_pickle, fp)
+
         return best_design[0], st_reachable, correctness_trajs
 
     def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
@@ -216,7 +281,7 @@ class MCMCAdapt:
         num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
-        num_state_additions = 1
+        num_state_additions = 1 if num_mods < self.mod_limit else 0
         num_state_deletions = num_added_states
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
 
@@ -228,6 +293,12 @@ class MCMCAdapt:
                                                     num_state_additions/sum_options,
                                                     num_state_deletions/sum_options])
 
+        for transition in removed_transitions:
+            for transition2 in removed_transitions:
+                if transition != transition2:
+                    if transition.source == transition2.source and transition.condition == transition2.condition:
+                        exit()
+
         undoable = None
         if selection == 1:    # modify existing state
             undoable = (1, (None))
@@ -238,7 +309,7 @@ class MCMCAdapt:
                 #print(str(mod_tracker))
                 #for trans in removed_transitions:
                     #print(str(trans))
-                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
+                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans(removed_transitions))
             else:
                 transition = random.choice(all_trans)
 
@@ -267,7 +338,7 @@ class MCMCAdapt:
                 #print(str(mod_tracker))
                 #for trans in removed_transitions:
                 #    print(str(trans))
-                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans())
+                transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans(removed_transitions))
             else:
                 transition = random.choice(all_trans)
 
@@ -280,6 +351,7 @@ class MCMCAdapt:
 
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
             all_trans.remove(transition)
+
             removed_transitions.append(transition)
 
             # update the mod tracker

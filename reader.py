@@ -16,6 +16,16 @@ class Reader:
 
         root = tree.getroot()
 
+        temp_dict = self.io_data["outputs"]
+        for micro_type in temp_dict:
+            for param in temp_dict[micro_type]["params"]:
+                if param == "answers robot can recognize":
+                    param_list = []
+                    for item in temp_dict[micro_type]["params"][param]:
+                        dic = {"val":item, "link":temp_dict[micro_type]["params"][param][item]}
+                        param_list.append(dic)
+                    temp_dict[micro_type]["params"][param] = param_list
+
         # groups
         states = {}
         micro_selection = []
@@ -29,9 +39,17 @@ class Reader:
                     parameters = []
                     param_dict = {}
                     for k in i.iterfind("parameter"):
-                        name = k.text
-                        type = k.attrib["type"]
-                        val = k.attrib["val"]
+                        if k.attrib["type"] != "array":
+                            name = k.text
+                            type = k.attrib["type"]
+                            val = k.attrib["val"]
+                        else:
+                            val = []
+                            type = "array"
+                            for l in k.iterfind("name"):
+                                name = str(l.text)
+                            for l in k.iterfind("item"):
+                                val.append({"val":str(l.attrib["val"]), "link":str(l.attrib["link"])})
                         globParam = Global(name, type)
                         globParam.val = val
                         parameters.append(globParam)
@@ -110,6 +128,9 @@ class TrajectoryReader:
                 _ = raw_traj.pop(-1) # start time
                 _ = raw_traj.pop(-1) # date
 
+                _ = raw_traj.pop(-1) # id
+                _ = raw_traj.pop(-1) # mutated?
+
                 is_correctness = raw_traj.pop(-1)
                 is_prefix = raw_traj.pop(-1)
                 score = raw_traj.pop(-1)
@@ -121,7 +142,7 @@ class TrajectoryReader:
 
                     micro = Microinteraction(raw_traj[i+1][0])
                     raw_human_input = raw_traj[i][-1]
-                    if raw_human_input == "human_ready":
+                    if raw_human_input.decode("utf-8")  == "human_ready":
                         inp = "Ready"
                     else:
                         inp = "Ignore"

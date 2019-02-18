@@ -72,6 +72,7 @@ d3.json("dimensions.json", function(data) {
     }
 
     states.forEach(function(state) {
+      console.log(state)
       var node_label = state_data[state]["name"] + "\n(" + state_data[state]["micro"] + ")\n" + state + " - " + state_data[state]["prob"].toFixed(2);
       console.log(state)
       if (nonverb)

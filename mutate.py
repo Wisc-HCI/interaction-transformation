@@ -8,7 +8,7 @@ import json
 
 from interaction_components import InputAlphabet, OutputAlphabet
 
-sys.path.append('../../../../../interaction-adaptation/inputs/cs_event_query')
+sys.path.append('../../../../../Repair/repair_algorithms/inputs/cs_event_query')
 import properties
 
 class Mutator:
@@ -43,7 +43,7 @@ class Mutator:
     def mutate(self, property_dir):
         mutation_accepted = False
 
-        json_raw=open("../../../../../interaction-adaptation/inputs/cs_event_query/io.json")
+        json_raw=open("../../../../../Repair/repair_algorithms/inputs/cs_event_query/io.json")
         json_data = json.load(json_raw)
         inputs = InputAlphabet(json_data)
         raw_outputs = {"outputs": {}}

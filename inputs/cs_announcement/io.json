@@ -1,4 +1,22 @@
 {"inputs": {"Ready": 0, "Ignore": 1},
- "outputs": {"Greeter": 0, "Remark": 1, "Farewell": 2, "Wait": 3},
- "mod_percent": 1,
- "time_mcmc": 0.05}
+ "outputs": {"Greet": {"id":0,"micro":"Greeter", "content":"false", "params":{"Greet_with_speech":"true",
+                                                            "Greet_with_handshake":"false",
+                                                            "Wait_for_response":"true"}
+                       },
+             "Announcement": {"id":2,"micro":"Remark","content":"false","params":{"content":"Test content",
+                                                                 "use_gesture":"true",
+                                                                 "Allow_human_to_respond":"true"}
+                        },
+             "Bye": {"id":4,"micro":"Farewell","content":"false","params":{}
+                        },
+             "Wait_for_Action": {"id":10,"micro":"Wait","content":"false","params":{"look_at_people":"false",
+                                                      "allow_speech":"true",
+                                                      "wait time (seconds)":"false"}
+                        },
+             "Arrive": {"id":10,"micro":"Wait","content":"false","params":{"look_at_people":"false",
+                                                      "allow_speech":"true",
+                                                      "wait time (seconds)":"false"}
+                        }
+            },
+ "mod_percent": 0.4,
+ "time_mcmc": 500000}
