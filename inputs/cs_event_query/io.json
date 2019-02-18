@@ -31,7 +31,7 @@
                              },
              "Wait": {"id":10,"micro":"Wait","content":"false","params":{"look_at_people":"false",
                                                       "allow_speech":"true",
-                                                      "wait time (seconds)":"false"}
+                                                      "wait time (seconds)":"10"}
                              },
              "ListOut": {"id":11,"micro":"Remark","content":"false","params":{"content":"$CONTENT_ALL$",
                                                            "use_gesture":"true",

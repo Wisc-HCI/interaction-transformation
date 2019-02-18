@@ -5,6 +5,7 @@ from ts_modifier import TSModifier
 import importlib
 import sys
 import json
+import time
 
 from interaction_components import InputAlphabet, OutputAlphabet
 
@@ -91,7 +92,9 @@ class Mutator:
         ts_modifier = TSModifier(mod_limit,micro_selection,inputs)
 
         mut_count = 0
-        while not mutation_accepted:
+        start_time = time.time()
+        end_time = time.time()
+        while end_time - start_time < 30 and not mutation_accepted:
 
             # make a mutation
             ts_modifier.modify_TS(self.TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
@@ -105,6 +108,11 @@ class Mutator:
 
             if sum(results)*1.0/len(results) == 1.0:
                 break
+
+            end_time = time.time()
+
+        if sum(results)*1.0/len(results) < 1.0:
+            return None,None,None
 
         print(self.TS)
 
