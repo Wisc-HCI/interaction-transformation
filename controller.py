@@ -36,32 +36,37 @@ class Controller:
 
 
         # read in arrays, form trajectories
-        self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        # self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+
 
         # generate FAKE sample traces
-        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
+        # with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
-        #tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
-        #TraceGenerator = tracegen_module.TraceGenerator
-        #tracegen = TraceGenerator(self.TS)
-        #self.trajs = self.trajs + tracegen.get_trajectories(100)
-        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
-        #    pickle.dump(self.trajs,fp)
+        tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
+        TraceGenerator = tracegen_module.TraceGenerator
+        tracegen = TraceGenerator(self.TS)
+        self.trajs = tracegen.get_trajectories(5)
+        with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
+           pickle.dump(self.trajs,fp)
         self.consolidate_trajectories()
 
-        '''
-        print("\n\n\n")
-        for traj in self.trajs:
-            print(traj)
-        print("\nTRAJ DICT\n")
-        for key,val in self.consolidated_traj_dict.items():
-            print("{}     -     {}".format(key,val))
-        print("\nNEW TRAJS\n")
-        for traj in self.consolidated_trajs:
-            print(traj)
+
+
+
+        # print("\n\n\n")
+        # for traj in self.trajs:
+        #     print("\n\n{}".format(traj))
+        # print("\nTRAJ DICT\n")
+        # for key,val in self.consolidated_traj_dict.items():
+        #     print("{}     -     {}".format(key,val))
+        # print("\nNEW TRAJS\n")
+        # for traj in self.consolidated_trajs:
+        #     print(traj)
 
         exit()
-        '''
+
+
+
 
 
         # add default microinteractions not already in micro_selection

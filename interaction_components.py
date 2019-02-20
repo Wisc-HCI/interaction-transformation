@@ -94,7 +94,14 @@ class Microinteraction:
         self.type = type
         self.weight = weight
 
+    def get(self):
+        return self.type
+
 class HumanInput:
 
     def __init__(self, type):
         self.type = type
+
+    def get(self):
+        return self.type
+
