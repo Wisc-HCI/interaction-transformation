@@ -37,7 +37,6 @@ class TraceGenerator:
                     traj.append((HumanInput(selection), Microinteraction(trans.target.micros[0]["name"], 0)))
 
             score = self.score_calculator(traj)
-            print("score: ", score)
 
             trajs.append(Trajectory(traj, score))
         return trajs
@@ -68,10 +67,10 @@ class TraceGenerator:
         # print("\n\n{}".format(Trajectory(traj, 0)))
 
         traj = [t[0].get()+t[1].get() for t in traj]
-        for t in traj:
-            print (t)
+        # for t in traj:
+        #     print (t)
         occurrence = Counter(traj)
-        print(occurrence)
+        # print(occurrence)
 
         # >=1 Did_not_get_that (-2).    >=3 Did_not_get_that (-5)
         if "IgnoreDidNotGetThat" in occurrence.keys():
@@ -114,7 +113,6 @@ class TraceGenerator:
                 points += 2
                 flag_query_second = False
 
-        print("points: ", points)
         if points < criteria_lower_bound:
             score = -1
         elif criteria_lower_bound <= points < criteria_upper_bound:
