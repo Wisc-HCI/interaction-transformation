@@ -95,7 +95,6 @@ def data_preprocessor (input_style):
         trajs = []
         for r in raw_data:
             traj_vect = []
-            print("\n\n{}".format(r))
             vect = r.vect
             for v in vect:
                 human_input = v[0].type
@@ -132,5 +131,7 @@ def data_preprocessor (input_style):
             inp.append(traj_vect[0] + traj_vect[1])
         behaviors.append(inp)
 
-    return score, behaviors
+    prefix = np.array(list(traj['is_prefix'] for traj in trajs))
+
+    return score, behaviors, prefix
 

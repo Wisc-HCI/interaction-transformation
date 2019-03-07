@@ -57,7 +57,7 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward, is_prefix=False, is_correctness=False):
+    def __init__(self, vect, reward, is_prefix, is_correctness=False):
         self.vect = vect
         self.reward = reward
         self.is_prefix = is_prefix

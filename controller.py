@@ -35,7 +35,7 @@ class Controller:
         self.time_mcmc = json_data["time_mcmc"]
 
 
-        # read in arrays, form trajectories
+        # # read in arrays, form trajectories
         # self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
 
 
@@ -45,7 +45,7 @@ class Controller:
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
         TraceGenerator = tracegen_module.TraceGenerator
         tracegen = TraceGenerator(self.TS)
-        number_of_traj = 3000
+        number_of_traj = 600
         self.trajs = tracegen.get_trajectories(number_of_traj)
         with open("inputs/{}/history.pkl".format(self.path_to_interaction),
                   "wb") as fp:
