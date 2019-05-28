@@ -127,6 +127,7 @@ class Z3Adapt:
             # get counterexamples
             results, counterexamples = property_checker.compute_constraints(new_TS, self.setup_helper, removed_transitions)
             result = sum(results)*1.0/len(results)
+            perf_idx = result
             print("correctness property satisfaction: {}".format(result))
             counter = 0
             for counterexample in counterexamples:
@@ -139,7 +140,6 @@ class Z3Adapt:
                     correctness_trajs.append(traj)
                 counter += 1
 
-        exit()
 
         #plot_data["rewards"].append(total_reward)
         #total_reward_plotter.update_graph(plot_data["rewards"])

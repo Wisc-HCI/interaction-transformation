@@ -36,15 +36,17 @@ class Controller:
 
 
         # read in arrays, form trajectories
-        self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        #self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
-        #tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
-        #TraceGenerator = tracegen_module.TraceGenerator
-        #tracegen = TraceGenerator(self.TS)
-        #self.trajs = self.trajs + tracegen.get_trajectories(100)
+        self.trajs = []
+        tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
+        TraceGenerator = tracegen_module.TraceGenerator
+        sampler_module = importlib.import_module("inputs.{}.sampler".format(path_to_interaction))
+        tracegen = TraceGenerator(self.TS, self.inputs.alphabet, self.outputs.alphabet, sampler_module)
+        self.trajs = self.trajs + tracegen.get_trajectories(1)
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
         #    pickle.dump(self.trajs,fp)
         self.consolidate_trajectories()
@@ -138,6 +140,8 @@ class Controller:
 
         #for i in range(2):
         #print("Day {}".format(i))
+        for traj in self.consolidated_trajs:
+            print(traj)
         z3 = Z3Adapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
         self.TS, st_reachables, correctness_trajs = z3.adapt(reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)

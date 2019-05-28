@@ -115,12 +115,13 @@ class Properties:
 
         '''
         tup = (f_T,f_M,n)
+        '''
         self.get_counterexample(3,2*n,f_T,f_M,n,self.farewell_exists_constraint,setup_helper,setup_constraints,results,counterexamples, "farewell exists")
         self.get_counterexample(4,2*n+1,f_T,f_M,n,self.farewell_end_constraint,setup_helper,setup_constraints,results,counterexamples, "farewell end")
         self.get_counterexample(5,2*n+1,f_T,f_M,n,self.liveness_constraint,setup_helper,setup_constraints,results,counterexamples, "liveness")
         self.get_counterexample(6,2*n+1,f_T,f_M,n,self.how_help_constraint,setup_helper,setup_constraints,results,counterexamples, "how help")
         self.get_counterexample(7,2*n+1,f_T,f_M,n,self.need_more_help_constraint,setup_helper,setup_constraints,results,counterexamples, "need more help")
-
+        '''
         return results, counterexamples
 
     def get_counterexample(self, id, size, f_T, f_M, n, func, setup_helper, setup_constraints, results, counterexamples, label):

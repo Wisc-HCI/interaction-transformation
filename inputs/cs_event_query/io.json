@@ -48,5 +48,5 @@
                                                          "question": "Do you have any more questions?"}
                         }
             },
- "mod_percent": 0.4,
+ "mod_percent": 0.6,
  "time_mcmc": 500000}

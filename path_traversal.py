@@ -24,6 +24,8 @@ class PathTraversal:
 
             curr_st = self.TS.init
             for i in range(1, len(vect)):
+                if not traj.is_prefix and i == len(vect) - 1:
+                    break
                 inp = vect[i][0].type
                 test_out = vect[i][1].type
 

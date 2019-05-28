@@ -55,17 +55,9 @@
 
 	</group>
 
-	<group id="5" init="false" final="true" x="675.0" y="270.0">
-			<name>Bye2</name>
-			<micro>
-				<name>Farewell</name>
-			</micro>
-
-	</group>
-
 	<transition>
 		<source ref="0"/>
-		<target ref="3"/>
+		<target ref="1"/>
 		<guard condition="human_ready"/>
 	</transition>
 
@@ -90,7 +82,7 @@
 
 	<transition>
 		<source ref="1"/>
-		<target ref="2"/>
+		<target ref="3"/>
 		<guard condition="human_ready"/>
 	</transition>
 
@@ -104,24 +96,6 @@
 		<source ref="3"/>
 		<target ref="4"/>
 		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
-		<source ref="4"/>
-		<target ref="5"/>
-		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
-		<source ref="5"/>
-		<target ref="3"/>
-		<guard condition="human_ready"/>
-	</transition>
-
-	<transition>
-		<source ref="5"/>
-		<target ref="1"/>
-		<guard condition="human_ignore"/>
 	</transition>
 
 	<design>Delivery</design>
