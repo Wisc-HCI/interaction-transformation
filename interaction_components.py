@@ -57,7 +57,7 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward, is_prefix=False, is_correctness=False):
+    def __init__(self, vect, reward, is_prefix, is_correctness=False):
         self.vect = vect
         self.reward = reward
         self.is_prefix = is_prefix
@@ -94,7 +94,14 @@ class Microinteraction:
         self.type = type
         self.weight = weight
 
+    def get(self):
+        return self.type
+
 class HumanInput:
 
     def __init__(self, type):
         self.type = type
+
+    def get(self):
+        return self.type
+

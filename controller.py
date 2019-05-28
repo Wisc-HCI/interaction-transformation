@@ -39,7 +39,7 @@ class Controller:
         #self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
-        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
+        # with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
         self.trajs = []
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
@@ -63,7 +63,9 @@ class Controller:
             print(traj)
 
         exit()
-        '''
+
+
+
 
 
         # add default microinteractions not already in micro_selection
