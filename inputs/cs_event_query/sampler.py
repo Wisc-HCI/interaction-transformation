@@ -77,10 +77,12 @@ class Sampler:
         #    objective = 0
 
         print("SOLVER --> setting up optimization problem")
-        o = Optimize()
+        o = Solver()
         o.add(consts, path_consts, prop_constraints)
         o.add(obj_const)
-        h = o.maximize(Sum(objective))
+        objective_func=(Sum(objective)>=7)
+        #h = o.maximize(Sum(objective))
+        o.add(objective_func)
 
         print("SOLVER --> solving")
         start_time = time.time()
@@ -91,7 +93,7 @@ class Sampler:
         objective_val = None
         if satisfaction == sat:
 
-            o.upper(h)
+            #o.upper(h)
             m = o.model()
             print(m)
             for p in paths:
