@@ -1,6 +1,7 @@
 from z3 import *
 
 import time
+import math
 
 class Sampler:
 
@@ -124,7 +125,6 @@ class Sampler:
         traj_strings = list(self.traj_dict)
         for i in range(len(traj_strings)):
             traj_string = traj_strings[i]
-            print(traj_string)
             traj = self.traj_dict[traj_string][1].vect
             weight = self.traj_dict[traj_string][0]
             reward = self.traj_dict[traj_string][1].reward
@@ -171,7 +171,7 @@ class Sampler:
         constraints = And(constraints,f_M(-1)==-1)
         for st in sts:
             constraints = And(constraints, f_M(st)>=0, f_M(st)<len(self.outputs))
-            constraints = And(constraints, st>=-1, st<num_nodes)
+            constraints = And(constraints, st>=-1, st<num_nodes)  # this is redundant
 
         # TREE CONSTRAINTS
         # set the ID and the level no
@@ -179,7 +179,12 @@ class Sampler:
         counter = 0
         for st in sts:
             constraints=And(constraints,st==counter)
-            constraints=And(constraints,f_L(st)>=0,f_L(st)<self.max_branch_len)
+            #constraints=And(constraints,f_L(st)>=0,f_L(st)<self.max_branch_len)
+
+            if counter >= 1:  # assign states to levels
+                level = math.floor((counter-1)/self.num_branches) + 1
+                constraints = And(constraints,f_L(st)==level)
+
             counter += 1
 
         # f_T constraints
@@ -188,6 +193,8 @@ class Sampler:
                 constraints = And(constraints, f_T(st1,self.inputs[inp])>=-1, f_T(st1,self.inputs[inp])<num_nodes)
         for inp in self.inputs:
             constraints = And(constraints, f_T(-1,self.inputs[inp])==-1)
+
+        #constraints = And(constraints, f_T(0,0)==2, f_T(0,1)==2)
 
         # tree level constraints
         for st1 in sts:
@@ -203,6 +210,28 @@ class Sampler:
             for inp in self.inputs:
                 constraints = And(constraints, Implies(f_T(st,self.inputs[inp])>=0,f_P(f_T(st,self.inputs[inp]))==st))
 
+        # count how many "orphan" nodes so that we can give them extra leaves
+        hangers = [Int("hanger_{}".format(i)) for i in range(len(sts))]
+        constraints = And(constraints, hangers[0]==0)
+        for i in range(1,len(sts)):
+
+            constraints = And(constraints,Or(hangers[i]==0,hangers[i]==1))
+
+            if i>0 and i<=self.num_branches:
+                parents = [0]
+            else:
+                parent_min = (i-self.num_branches) - ((i-self.num_branches)-1)%self.num_branches
+                parent_max = parent_min + (self.num_branches-1)
+                parents = [j for j in range(parent_min,parent_max+1)]
+
+            is_connected = Or(False)
+            for st in parents:
+                for inp in self.inputs:
+                    is_connected = Or(is_connected, f_T(sts[st],self.inputs[inp])==sts[i])
+
+            constraints = And(constraints,Implies(Not(is_connected),hangers[i]==1))
+            constraints = And(constraints,Implies(is_connected,hangers[i]==0))
+
         # constraints on number of leaves
         for i in range(len(sts)):
             st1 = sts[i]
@@ -214,7 +243,7 @@ class Sampler:
         for b in bc:
             constraints = And(constraints, Or(b==0,b==1))
 
-        constraints = And(constraints, Sum(bc)==self.num_branches)
+        constraints = And(constraints, Sum(bc)==(self.num_branches + Sum(hangers)))
 
         return constraints
 

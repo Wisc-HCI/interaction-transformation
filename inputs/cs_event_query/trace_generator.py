@@ -105,12 +105,12 @@ class TraceGenerator:
             # completely random
             #score = np.random.random() - 0.5
 
-            trajs.append(Trajectory(traj,score))
+            trajs.append(Trajectory(traj,score,False))
 
         '''
         Testing the sampler
         '''
-        sampler = self.Sampler(trajs, 2, self.inputs, self.outputs)
+        sampler = self.Sampler(trajs, 4, self.inputs, self.outputs)
         sampler.solve()
         exit()
 
