@@ -51,6 +51,20 @@ class Sampler:
 
     def solve(self):
 
+        # this may change later on
+        max_possible_score = self.num_branches * 2
+
+        prev_m = None
+        for i in range(0,max_possible_score+1):
+            m = self.solve_helper(i)
+            if m is None:
+                break
+            else:
+                prev_m = m
+                print("found solution with score>={}".format(i))
+
+    def solve_helper(self, thresh):
+
         # which nodes each node points to
         f_T = Function("f_T", IntSort(), IntSort(), IntSort())
 
@@ -80,7 +94,7 @@ class Sampler:
         o = Solver()
         o.add(consts, path_consts, prop_constraints)
         o.add(obj_const)
-        objective_func=(Sum(objective)>=7)
+        objective_func=(Sum(objective)>=8)
         #h = o.maximize(Sum(objective))
         o.add(objective_func)
 
@@ -106,15 +120,23 @@ class Sampler:
             #print(m.evaluate(f_L))
             for obj in objective:
                 print(m.evaluate(obj))
+            #counter = 0
+            #for traj in self.traj_dict:
+            #    if int(str(m.evaluate(objective[counter]))) == 1:
+            #        print(traj)
+            #    counter += 1
+            print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
+            print("SOLVER --> returning solution")
+            return m
 
         else:
+            print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
+            print("SOLVER --> returning solution")
             print("ERROR: no solution")
-            exit()
+            return None
 
         #solution = self.package_results(m, f_T, f_M, n)
         #curr_time = time.time()
-        print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
-        print("SOLVER --> returning solution")
         #return solution,objective_val
 
     def setup_objective(self, obj, paths, f_T, f_M):
@@ -165,57 +187,57 @@ class Sampler:
 
         # make the tree nodes
         num_nodes = self.num_branches * self.max_branch_len
-        sts = [Int("st_{}".format(i)) for i in range(num_nodes)]
+        #sts = [Int("st_{}".format(i)) for i in range(num_nodes)]
         # bc = a binary flag array showing which nodes are children
         bc = [Int("bc_{}".format(i)) for i in range(num_nodes)]
 
         # node identity constraints and restrict the id's of each node
         constraints = And(constraints,f_M(-1)==-1)
-        for st in sts:
-            constraints = And(constraints, f_M(st)>=0, f_M(st)<len(self.outputs))
-            constraints = And(constraints, st>=-1, st<num_nodes)  # this is redundant
+        for i in range(num_nodes):
+            constraints = And(constraints, f_M(i)>=0, f_M(i)<len(self.outputs))
+            #constraints = And(constraints, st>=-1, st<num_nodes)  # this is redundant
 
         # TREE CONSTRAINTS
         # set the ID and the level no
         constraints=And(constraints,f_L(0)==0)
         counter = 0
-        for st in sts:
-            constraints=And(constraints,st==counter)
+        for i in range(1, num_nodes):
+            #constraints=And(constraints,st==counter)
             #constraints=And(constraints,f_L(st)>=0,f_L(st)<self.max_branch_len)
 
-            if counter >= 1:  # assign states to levels
-                level = math.floor((counter-1)/self.num_branches) + 1
-                constraints = And(constraints,f_L(st)==level)
+            #if counter >= 1:  # assign states to levels
+            level = math.floor((counter-1)/self.num_branches) + 1
+            constraints = And(constraints,f_L(i)==level)
 
             counter += 1
 
         # f_T constraints
-        for st1 in sts:
+        for i in range(num_nodes):
             for inp in self.inputs:
-                constraints = And(constraints, f_T(st1,self.inputs[inp])>=-1, f_T(st1,self.inputs[inp])<num_nodes)
+                constraints = And(constraints, f_T(i,self.inputs[inp])>=-1, f_T(i,self.inputs[inp])<num_nodes)
         for inp in self.inputs:
             constraints = And(constraints, f_T(-1,self.inputs[inp])==-1)
 
         #constraints = And(constraints, f_T(0,0)==2, f_T(0,1)==2)
 
         # tree level constraints
-        for st1 in sts:
+        for i in range(num_nodes):
             for inp in self.inputs:
-                for st2 in sts:
+                for j in range(num_nodes):
                     constraints = And(constraints,
-                                      Implies(And(f_T(st1,self.inputs[inp])==st2,
-                                                  st2!=-1),  # ensuring that -1's can be on different levels
-                                              f_L(st1)==f_L(st2)-1))
+                                      Implies(And(f_T(i,self.inputs[inp])==j,
+                                                  j!=-1),  # ensuring that -1's can be on different levels
+                                              f_L(i)==f_L(j)-1))
 
         # leaves can only be pointed to once (definition of tree)
-        for st in sts:
+        for i in range(num_nodes):
             for inp in self.inputs:
-                constraints = And(constraints, Implies(f_T(st,self.inputs[inp])>=0,f_P(f_T(st,self.inputs[inp]))==st))
+                constraints = And(constraints, Implies(f_T(i,self.inputs[inp])>=0,f_P(f_T(i,self.inputs[inp]))==i))
 
         # count how many "orphan" nodes so that we can give them extra leaves
-        hangers = [Int("hanger_{}".format(i)) for i in range(len(sts))]
+        hangers = [Int("hanger_{}".format(i)) for i in range(num_nodes)]
         constraints = And(constraints, hangers[0]==0)
-        for i in range(1,len(sts)):
+        for i in range(1, num_nodes):
 
             constraints = And(constraints,Or(hangers[i]==0,hangers[i]==1))
 
@@ -229,18 +251,17 @@ class Sampler:
             is_connected = Or(False)
             for st in parents:
                 for inp in self.inputs:
-                    is_connected = Or(is_connected, f_T(sts[st],self.inputs[inp])==sts[i])
+                    is_connected = Or(is_connected, f_T(st,self.inputs[inp])==i)
 
             constraints = And(constraints,Implies(Not(is_connected),hangers[i]==1))
             constraints = And(constraints,Implies(is_connected,hangers[i]==0))
 
         # constraints on number of leaves
-        for i in range(len(sts)):
-            st1 = sts[i]
+        for i in range(num_nodes):
             for inp in self.inputs:
                 constraints = And(constraints,
-                                  Implies(f_T(st1,self.inputs[inp])==-1,bc[i]==1),
-                                  Implies(bc[i]==1,f_T(st1,self.inputs[inp])==-1))
+                                  Implies(f_T(i,self.inputs[inp])==-1,bc[i]==1),
+                                  Implies(bc[i]==1,f_T(i,self.inputs[inp])==-1))
 
         for b in bc:
             constraints = And(constraints, Or(b==0,b==1))
