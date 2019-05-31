@@ -110,7 +110,7 @@ class TraceGenerator:
         '''
         Testing the sampler
         '''
-        sampler = self.Sampler(trajs, 4, self.inputs, self.outputs)
+        sampler = self.Sampler(trajs, 2, self.inputs, self.outputs)
         sampler.solve()
         exit()
 

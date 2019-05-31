@@ -55,35 +55,47 @@ class Sampler:
         max_possible_score = self.num_branches * 2
 
         prev_m = None
+        prev_f_T = None
+        prev_f_M = None
+
+        start_time = time.time()
         for i in range(0,max_possible_score+1):
-            m = self.solve_helper(i)
+            m, f_T, f_M = self.solve_helper(i)
             if m is None:
                 break
             else:
                 prev_m = m
+                prev_f_T = f_T
+                prev_f_M = f_M
                 print("found solution with score>={}".format(i))
+        end_time = time.time()
+
+        print("total time: {}".format(end_time - start_time))
+
+        #if prev_m is not None:
+        #    exp = Exporter(prev_m, self.num_branches*self.max_branch_len, self.inputs, 0, prev_f_T, prev_f_M)
 
     def solve_helper(self, thresh):
 
         # which nodes each node points to
-        f_T = Function("f_T", IntSort(), IntSort(), IntSort())
+        f_T = Function("f_T", BitVecSort(8), BitVecSort(8), BitVecSort(8))
 
         # mapping nodes to tree levels
-        f_L = Function("f_L", IntSort(), IntSort())
+        #f_L = Function("f_L", IntSort(), IntSort())
 
         # mapping nodes to their parents
-        f_P = Function("f_P", IntSort(), IntSort())
+        f_P = Function("f_P", BitVecSort(8), BitVecSort(8))
 
         # mapping outputs onto states
-        f_M = Function("f_M", IntSort(), IntSort())
+        f_M = Function("f_M", BitVecSort(8), BitVecSort(8))
 
-        consts = self.make_constraints(f_T, f_L, f_M, f_P)
+        consts = self.make_constraints(f_T, f_M, f_P)
 
-        paths, path_consts = self.make_paths(f_T, f_L, f_M)
+        paths, path_consts = self.make_paths(f_T, f_M)
 
         prop_constraints = self.check_paths(paths, f_M)
 
-        objective = [Int("obj_{}".format(i)) for i in range(len(self.traj_dict)+self.num_branches)] #Int("obj")
+        objective = [BitVec("obj_{}".format(i), 8) for i in range(len(self.traj_dict)+self.num_branches)] #Int("obj")
         obj_const = self.setup_objective(objective, paths, f_T, f_M)
 
         #for traj in self.trajs:
@@ -94,7 +106,7 @@ class Sampler:
         o = Solver()
         o.add(consts, path_consts, prop_constraints)
         o.add(obj_const)
-        objective_func=(Sum(objective)>=8)
+        objective_func=(Sum(objective)>=thresh)
         #h = o.maximize(Sum(objective))
         o.add(objective_func)
 
@@ -127,13 +139,13 @@ class Sampler:
             #    counter += 1
             print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
             print("SOLVER --> returning solution")
-            return m
+            return m, f_T, f_M
 
         else:
             print("SOLVER --> entire process took {} seconds".format(curr_time - start_time))
             print("SOLVER --> returning solution")
             print("ERROR: no solution")
-            return None
+            return None, None, None
 
         #solution = self.package_results(m, f_T, f_M, n)
         #curr_time = time.time()
@@ -164,12 +176,9 @@ class Sampler:
             for j in range(1, len(traj)):
                 #prev_output = self.outputs[traj[j-1][1].type]
                 correct_input = self.inputs[traj[j][0].type]
-                print(correct_input)
 
                 if traj[j][1].type != "END":
                     correct_output = self.outputs[traj[j][1].type]
-                    print(correct_output)
-                    print("~~~")
                     exists_within = And(exists_within, f_M(f_T(prev_output, correct_input))==correct_output)
                     prev_output = f_T(prev_output, correct_input)
                 #else:
@@ -182,14 +191,25 @@ class Sampler:
 
         return obj_const
 
-    def make_constraints(self, f_T, f_L, f_M, f_P):
+    def make_constraints(self, f_T, f_M, f_P):
         constraints = And(True)
 
         # make the tree nodes
         num_nodes = self.num_branches * self.max_branch_len
         #sts = [Int("st_{}".format(i)) for i in range(num_nodes)]
         # bc = a binary flag array showing which nodes are children
-        bc = [Int("bc_{}".format(i)) for i in range(num_nodes)]
+        bc = [BitVec("bc_{}".format(i), 8) for i in range(num_nodes)]
+
+        levels = [[0]]
+        curr_level = []
+        for i in range(1,num_nodes):
+            curr_level.append(i)
+            if ((i)%self.num_branches==0) or (i==num_nodes-1 and (i)%self.num_branches!=0):
+                level_to_add = []
+                for item in curr_level:
+                    level_to_add.append(item)
+                levels.append(level_to_add)
+                curr_level.clear()
 
         # node identity constraints and restrict the id's of each node
         constraints = And(constraints,f_M(-1)==-1)
@@ -199,6 +219,7 @@ class Sampler:
 
         # TREE CONSTRAINTS
         # set the ID and the level no
+        '''
         constraints=And(constraints,f_L(0)==0)
         counter = 0
         for i in range(1, num_nodes):
@@ -210,16 +231,35 @@ class Sampler:
             constraints = And(constraints,f_L(i)==level)
 
             counter += 1
+        '''
 
         # f_T constraints
-        for i in range(num_nodes):
-            for inp in self.inputs:
-                constraints = And(constraints, f_T(i,self.inputs[inp])>=-1, f_T(i,self.inputs[inp])<num_nodes)
+        #for i in range(num_nodes):
+        #    for inp in self.inputs:
+        #        constraints = And(constraints, f_T(i,self.inputs[inp])>=-1, f_T(i,self.inputs[inp])<num_nodes)
         for inp in self.inputs:
             constraints = And(constraints, f_T(-1,self.inputs[inp])==-1)
-
+        for i in range(len(levels)):
+            for st in levels[i]:
+                for inp in self.inputs:
+                    if i < (len(levels)-1):
+                        or_const = Or(False)
+                        for st_next_level in levels[i+1]:
+                            or_const = Or(or_const, f_T(st,self.inputs[inp])==st_next_level)
+                        or_const = Or(or_const, f_T(st,self.inputs[inp])==-1)
+                        constraints = And(constraints, or_const)
+                    else:
+                        constraints = And(constraints, f_T(st,self.inputs[inp])==-1)
+        for i in range(len(levels)):
+            for st1 in levels[i]:
+                for st2 in levels[i]:
+                    if st1!=st2:
+                        for inp1 in self.inputs:
+                            for inp2 in self.inputs:
+                                constraints = And(constraints, f_T(st1,self.inputs[inp1])!=f_T(st2,self.inputs[inp2]))
         #constraints = And(constraints, f_T(0,0)==2, f_T(0,1)==2)
 
+        '''
         # tree level constraints
         for i in range(num_nodes):
             for inp in self.inputs:
@@ -228,14 +268,17 @@ class Sampler:
                                       Implies(And(f_T(i,self.inputs[inp])==j,
                                                   j!=-1),  # ensuring that -1's can be on different levels
                                               f_L(i)==f_L(j)-1))
+        '''
 
         # leaves can only be pointed to once (definition of tree)
+        '''
         for i in range(num_nodes):
             for inp in self.inputs:
                 constraints = And(constraints, Implies(f_T(i,self.inputs[inp])>=0,f_P(f_T(i,self.inputs[inp]))==i))
+        '''
 
         # count how many "orphan" nodes so that we can give them extra leaves
-        hangers = [Int("hanger_{}".format(i)) for i in range(num_nodes)]
+        hangers = [BitVec("hanger_{}".format(i), 8) for i in range(num_nodes)]
         constraints = And(constraints, hangers[0]==0)
         for i in range(1, num_nodes):
 
@@ -270,12 +313,12 @@ class Sampler:
 
         return constraints
 
-    def make_paths(self, f_T, f_L, f_M):
+    def make_paths(self, f_T, f_M):
 
         path_const = And(True)
 
         # actually make the variables
-        ps = [[Int("p_{}_{}".format(j,i)) for i in range(self.max_branch_len)] for j in range(self.num_branches)]
+        ps = [[BitVec("p_{}_{}".format(j,i), 8) for i in range(self.max_branch_len)] for j in range(self.num_branches)]
 
         # restrict the id's of the path nodes
         for p in ps:
@@ -324,3 +367,33 @@ class Sampler:
 
 
         return prop_constraints
+
+class Exporter:
+
+    import json
+
+    def __init__(self, m, num_states, inputs, initial_state, f_T, f_M):
+        self.m = m
+        self.num_states = num_states
+        self.inputs = inputs
+        self.initial_state = initial_state
+
+        # open up io.json
+        json_raw=open("io.json", "r")
+        self.io_data = json.load(json_raw)
+
+    def export_to_object(self):
+        # states
+
+        # transitions
+        transitions = {}
+        for st in range(num_states):
+            for inp_name in self.inputs:
+                inp = self.inputs[inp_name]
+                output = int(str(m.evaluate(f_T(st,inp))))
+                transitions[source][target].append(Transition(st, output, inp_name))
+
+        # build
+        SMUtil().build(transitions, states)
+
+        return TS(states, transitions, init)
