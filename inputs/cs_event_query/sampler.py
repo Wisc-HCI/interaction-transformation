@@ -367,33 +367,3 @@ class Sampler:
 
 
         return prop_constraints
-
-class Exporter:
-
-    import json
-
-    def __init__(self, m, num_states, inputs, initial_state, f_T, f_M):
-        self.m = m
-        self.num_states = num_states
-        self.inputs = inputs
-        self.initial_state = initial_state
-
-        # open up io.json
-        json_raw=open("io.json", "r")
-        self.io_data = json.load(json_raw)
-
-    def export_to_object(self):
-        # states
-
-        # transitions
-        transitions = {}
-        for st in range(num_states):
-            for inp_name in self.inputs:
-                inp = self.inputs[inp_name]
-                output = int(str(m.evaluate(f_T(st,inp))))
-                transitions[source][target].append(Transition(st, output, inp_name))
-
-        # build
-        SMUtil().build(transitions, states)
-
-        return TS(states, transitions, init)

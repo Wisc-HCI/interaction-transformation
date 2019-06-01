@@ -300,6 +300,33 @@ class MCMCAdapt:
 
         undoable = None
         if selection == 1:    # modify existing state
+
+            '''
+
+            # randomly pick a state to modify
+            state = random.choice(all_states)
+            curr_state_name = state.name
+
+            # randomly pick a new micro
+            micro = random.choice(self.micro_selection)
+            state_name = self.get_unused_name(micro["name"], TS)
+
+            # replace the old state with the new state in TS.states[state_name]
+            TS.states.pop(curr_state_name)
+            TS.states[state_name] = state
+
+            # replace the microinteractions currently in state
+            state.micros = [micro]
+
+            # look for transitions that hzve been modified
+            modded_transitions = []
+            for trans in state.in_trans:
+                if trans.target
+
+            #
+            '''
+
+            # prepare the undoable
             undoable = (1, (None))
         elif selection == 2:  # modify existing transition
 
