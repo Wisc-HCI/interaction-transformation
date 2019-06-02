@@ -280,7 +280,7 @@ class MCMCAdapt:
         #print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
 
         # choose modification -- existing state, existing transition, remove transition, add transition, add state, remove state
-        num_state_mods = 0
+        num_state_mods = len(all_states)
         num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
@@ -300,19 +300,21 @@ class MCMCAdapt:
             for transition2 in removed_transitions:
                 if transition != transition2:
                     if transition.source == transition2.source and transition.condition == transition2.condition:
+                        print("problem")
                         exit()
 
         undoable = None
         if selection == 1:    # modify existing state
 
-            '''
             # randomly pick a state to modify
             state = random.choice(all_states)
             curr_state_name = state.name
+            old_micro = state.micros[0]
 
             # randomly pick a new micro
             micro = random.choice(self.micro_selection)
             state_name = self.get_unused_name(micro["name"], TS)
+            state.name = state_name
 
             # replace the old state with the new state in TS.states[state_name]
             TS.states.pop(curr_state_name)
@@ -327,11 +329,9 @@ class MCMCAdapt:
                 if trans.target is not None:
                     mod_tracker.update_mod_tracker(trans)
 
-            '''
             # prepare the undoable
-            undoable = (1, (None))
+            undoable = (1, (state, curr_state_name, old_micro))
             print("finished replacing state")
-            exit()
         elif selection == 2:  # modify existing transition
 
             # randomly pick a transition
@@ -520,7 +520,29 @@ class MCMCAdapt:
         selection = undoable[0]
 
         if selection == 1:    # undo modify existing state
-            pass
+
+            state = undoable[1][0]
+            old_state_name = undoable[1][1]
+            old_micro = undoable[1][2]
+
+            # randomly pick a state to modify
+            new_state_name = state.name
+
+            # replace the old state with the new state in TS.states[state_name]
+            TS.states.pop(new_state_name)
+            TS.states[old_state_name] = state
+
+            # replace the microinteractions currently in state
+            state.micros = [old_micro]
+            state.name = old_state_name
+
+            # look for transitions that hzve been modified
+            modded_transitions = []
+            for trans in state.in_trans:
+                if trans.target is not None:
+                    mod_tracker.update_mod_tracker(trans)
+
+            print("undone replacing state")
         elif selection == 2:  # undo modify existing transition
             #print("undoing that modification")
             target = undoable[1][0]

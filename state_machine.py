@@ -88,8 +88,10 @@ class TS(object):
         trans_to_return.target = target
 
         if trans_to_return is None:
+            print("duplicate trans error")
             exit(1)
         if trans_to_return.source is None:
+            print("duplicate trans error")
             exit(1)
         return trans_to_return
 
