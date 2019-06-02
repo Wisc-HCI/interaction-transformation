@@ -124,6 +124,7 @@ class TS(object):
                 for trans in self_transitions:
                     string += "transition: {}({}) >--{}--> {}({})\n".format(trans.source.name, trans.source.id, trans.condition, trans.target.name, trans.target.id)
 
+        string += "END"
         return string
 
 class SMUtil():

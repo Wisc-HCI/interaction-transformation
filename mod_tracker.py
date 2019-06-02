@@ -5,10 +5,12 @@ class ModificationTracker:
         for state in TS.states.values():
             for inp in inputs.alphabet:
                 dest_properties = None
+                dest = None
                 for trans in state.out_trans:
                     if trans.condition == inp:
                         dest = trans.target
                         dest_properties = dest.name
+                #self.mod_tracker[(state,inp)] = [0,dest]
                 self.mod_tracker[(state,inp)] = [0,dest_properties]
 
     def update_mod_tracker(self, transition, deleted=False):
@@ -21,6 +23,7 @@ class ModificationTracker:
         elif deleted:
             self.mod_tracker[(transition.source,transition.condition)][0] = 1
             #print("deleting, it was NOT meant to be")
+        #elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target:
         elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target.name:
             self.mod_tracker[(transition.source,transition.condition)][0] = 0
             #print("not deleting, and it was meant to be")

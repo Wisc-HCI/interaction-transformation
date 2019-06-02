@@ -38,7 +38,8 @@ class MCMCAdapt:
         #allowable_time = num_itr
         #allowable_time = 319.91643850803376
         #allowable_time = 98.7957421541214
-        allowable_time = 0.18487918376922607
+        #allowable_time = 0.18487918376922607
+        allowable_time = 10
 
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
@@ -88,11 +89,12 @@ class MCMCAdapt:
         best_result = -1
         overall_best_design = [TS,[TS.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]]
         break_time = 36000
-        #while result < 1:
-        perf_idx = 0
-        time_start = time.time()
-        while perf_idx < 1:
-            perf_idx = 1
+        while result < 1:
+        #perf_idx = 0
+        #while perf_idx < 1:
+            #perf_idx = 1
+
+            time_start = time.time()
 
             # have an exit if needed
             if time.time() - lowbound_time >= break_time: #43200
@@ -200,10 +202,12 @@ class MCMCAdapt:
 
             print("MCMC steps: {}".format(i))
             SMUtil().build(best_design[0].transitions, best_design[0].states)
+            print("the best design from this iteration is shown below")
             print(str(best_design[0]))
             results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
-
+            print("prev best result: {}".format(best_result))
+            print("curr best result: {}".format(result))
             if result >= best_result:
                 best_result = result
                 overall_best_design[0] = best_design[0].copy()
@@ -302,7 +306,6 @@ class MCMCAdapt:
         if selection == 1:    # modify existing state
 
             '''
-
             # randomly pick a state to modify
             state = random.choice(all_states)
             curr_state_name = state.name
@@ -321,13 +324,14 @@ class MCMCAdapt:
             # look for transitions that hzve been modified
             modded_transitions = []
             for trans in state.in_trans:
-                if trans.target
+                if trans.target is not None:
+                    mod_tracker.update_mod_tracker(trans)
 
-            #
             '''
-
             # prepare the undoable
             undoable = (1, (None))
+            print("finished replacing state")
+            exit()
         elif selection == 2:  # modify existing transition
 
             # randomly pick a transition
