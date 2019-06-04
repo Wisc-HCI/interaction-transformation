@@ -15,21 +15,22 @@ class ModificationTracker:
 
     def update_mod_tracker(self, transition, deleted=False):
         if (transition.source, transition.condition) not in self.mod_tracker:
+            print("   MC: returning prematurely")
             return
 
         if deleted and self.mod_tracker[(transition.source,transition.condition)][1] is None:
             self.mod_tracker[(transition.source,transition.condition)][0] = 0
-            #print("deleting, but it was meant to be deleted anyway........")
+            print("   MC: deleting, but it was meant to be deleted anyway........")
         elif deleted:
             self.mod_tracker[(transition.source,transition.condition)][0] = 1
-            #print("deleting, it was NOT meant to be")
+            print("   MC: deleting, it was NOT meant to be")
         #elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target:
         elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target.name:
             self.mod_tracker[(transition.source,transition.condition)][0] = 0
-            #print("not deleting, and it was meant to be")
+            print("   MC: not deleting, and it was meant to be")
         else:
             self.mod_tracker[(transition.source,transition.condition)][0] = 1
-            #print("it was NOT meant to be")
+            print("   MC: it was NOT meant to be")
 
     def check_mod_tracker_sum(self):
         sum = 0

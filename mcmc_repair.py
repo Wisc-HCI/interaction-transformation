@@ -39,7 +39,7 @@ class MCMCAdapt:
         #allowable_time = 319.91643850803376
         #allowable_time = 98.7957421541214
         #allowable_time = 0.18487918376922607
-        allowable_time = 10
+        allowable_time = 0.010
 
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
@@ -137,8 +137,11 @@ class MCMCAdapt:
             # we want to cap the time at 12 hours
             while True:
 
+                # get the current time
+                curr_time = time.time()
+
                 # have an exit if needed
-                if time.time() - lowbound_time >= break_time: #43200
+                if curr_time - lowbound_time >= break_time: #43200
                     break
 
                 plot_data["rewards"].append(sum(reward_vect))
@@ -146,12 +149,11 @@ class MCMCAdapt:
                 plot_data["cost"].append(precost)
                 plot_data["props"].append(sat_ratio)
                 plot_data["distances"].append(distance)
-                curr_time = time.time()
                 plot_data["time"].append(curr_time)
 
                 #time_elapsed = curr_time - start_time
                 #if miter > allowable_time or sum(reward_vect) == max_possible_reward:
-                if time.time() - time_start > allowable_time:
+                if curr_time - time_start > allowable_time:
                     with open("plot_data.pkl", "wb") as fp:
                         pickle.dump(plot_data["progress"], fp)
                     total_reward_plotter.update_graph(plot_data["rewards"])
@@ -180,6 +182,7 @@ class MCMCAdapt:
                     reject_counter += 1
                     self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
                 else:
+                    print(TS)
                     accept_counter += 1
                     precost = postcost
                     reward_vect = new_reward_vect
@@ -201,6 +204,7 @@ class MCMCAdapt:
                 miter += 1
 
             print("MCMC steps: {}".format(i))
+            exit()
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print("the best design from this iteration is shown below")
             print(str(best_design[0]))
@@ -280,12 +284,31 @@ class MCMCAdapt:
         #print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
 
         # choose modification -- existing state, existing transition, remove transition, add transition, add state, remove state
-        num_state_mods = len(all_states)
+        '''
+        needs to be "else choose the number of modified states"
+        '''
+        num_state_mods = len(all_states) if num_mods < self.mod_limit else 0
+        '''
+        done with potential modifications
+        NOTE: what do we do when there are limited modifications that can be made??
+        USE MOD LIMITED
+        '''
         num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
-        num_state_additions = 1 if num_mods < self.mod_limit else 0
+        num_state_additions = num_trans if num_mods < self.mod_limit else 0
         num_state_deletions = num_added_states
+
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\nNEW MODIFICATION{}".format("   ~~~ mod limited" if mod_limited else ""))
+        print("   num mods: {}".format(num_mods))
+        print("   mod limit: {}".format(self.mod_limit))
+        print("num state mods: {}".format(num_state_mods))
+        print("num transition mods: {}".format(num_transition_mods))
+        print("num transition deletions: {}".format(num_transition_deletions))
+        print("num transition additions: {}".format(num_transition_additions))
+        print("num state additions: {}".format(num_state_additions))
+        print("num state deletions: {}".format(num_state_deletions))
+
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
 
         options = [1,2,3,4,5,6]
@@ -305,7 +328,7 @@ class MCMCAdapt:
 
         undoable = None
         if selection == 1:    # modify existing state
-
+            print("~CHOICE~: state modification")
             # randomly pick a state to modify
             state = random.choice(all_states)
             curr_state_name = state.name
@@ -331,9 +354,8 @@ class MCMCAdapt:
 
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
-            print("finished replacing state")
         elif selection == 2:  # modify existing transition
-
+            print("~CHOICE~: transition modification")
             # randomly pick a transition
             if mod_limited:
                 #print(str(mod_tracker))
@@ -363,6 +385,7 @@ class MCMCAdapt:
 
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
+            print("~CHOICE~: transition deletion")
             # randomly pick a transition
             if mod_limited:
                 #print(str(mod_tracker))
@@ -389,7 +412,7 @@ class MCMCAdapt:
 
             undoable = (3, (transition, source, target))
         elif selection == 4:  # add transition
-
+            print("~CHOICE~: transition addition")
             # randomly pick a transition
             if mod_limited:
                 transition = random.choice(mod_tracker.get_mod_tracker_empty_trans(removed_transitions))
@@ -415,7 +438,24 @@ class MCMCAdapt:
             mod_tracker.update_mod_tracker(transition)
 
             undoable = (4, (transition, source, target))
-        elif selection == 5:  # add state
+        elif selection == 5:  # insert state
+            print("~CHOICE~: state insertion")
+            '''
+            # DECIDE ON WHERE TO INSERT THE STATE
+            '''
+            # randomly select a transition
+            trans = random.choice(all_trans)
+            source_state = trans.source
+            target_state = trans.target
+            trans_to_modify = [trans]
+
+            # determine if another transition between the selected states exists
+            for other_trans in source_state.out_trans:
+                if other_trans != trans:
+                    if other_trans.target == target_state and (self.mod_limit-num_mods)-len(trans_to_modify)>0:
+                        trans_to_modify.append(other_trans)
+
+            # come up with the new state
             micro = random.choice(self.micro_selection)
             state_name = self.get_unused_name(micro["name"], TS)
             #print("adding a state: {}".format(state_name))
@@ -429,22 +469,68 @@ class MCMCAdapt:
             # add to transitions
             TS.transitions[state.id] = {}
             for st_old in TS.states:
-                TS.transitions[state.id][TS.states[st_old].id] = []
-                TS.transitions[TS.states[st_old].id][state.id] = []
+                TS.transitions[str(state.id)][str(TS.states[st_old].id)] = []
+                TS.transitions[str(TS.states[st_old].id)][str(state.id)] = []
 
             transitions = []
             for inp in self.inputs.alphabet:
-                transition = Transition(state.id, state.id, inp)
+                transition = Transition(state.id, target_state.id, inp)
                 transition.source = state
                 transition.source.out_trans.append(transition)
-                transition.target = state
+                '''
+                THE FOLLOWING LINE IS AN ADDITION
+                '''
+                transition.target = target_state
                 transition.target.in_trans.append(transition)
                 all_trans.append(transition)
                 transitions.append(transition)
-                TS.transitions[str(state.id)][str(state.id)].append(transition)
+                '''
+                THE FOLLOWING LINE WAS MODIFIED
+                '''
+                TS.transitions[str(state.id)][str(target_state.id)].append(transition)
 
-            undoable = (5, (state, transitions))
+            '''
+            NOW WE MUST REMOVE THE OLD INPUT TRANSITIONS FROM THE TARGET STATE
+            '''
+            for trans in trans_to_modify:
+                target_state.in_trans.remove(trans)
+
+            '''
+            NOW WE MUST CHANGE THE TARGET STATE OF THE INPUT TRANS
+            '''
+            for trans in trans_to_modify:
+                trans.target = state
+                trans.target_id = state.id
+
+            '''
+            NOW WE MUST MODIFY THE TRANS_TO_MODIFY
+            '''
+            for trans in trans_to_modify:
+                mod_tracker.update_mod_tracker(trans)
+
+
+            '''
+            NOW WE MUST SET THE IN and OUT TRANS LISTS OF THE NEW STATE
+            '''
+            for trans in trans_to_modify:
+                state.in_trans.append(trans)
+            #for trans in transitions:
+            #    state.out_trans.append(trans)
+
+            '''
+            NOW WE MUST MODIFY THE TRANSITIONS DATASTRUCTURE TO REFLECT THE CHANGES
+            '''
+            # remove the transitions from the old
+            for trans in trans_to_modify:
+                TS.transitions[str(source_state.id)][str(target_state.id)].remove(trans)
+
+            # add the transitons to the new
+            for trans in trans_to_modify:
+                TS.transitions[str(source_state.id)][str(state.id)].append(trans)
+
+            undoable = (5, (state, transitions, trans_to_modify, source_state, target_state))
         elif selection == 6:  # delete existing state
+            print("~CHOICE~: state deletion")
             # choose a state
             state = random.choice(added_states)
             #print("deleting existing state: {}".format(state.name))
@@ -461,7 +547,6 @@ class MCMCAdapt:
 
             modified_linked = {}
             for trans in trans_toremove:
-
                 trans.target.in_trans.remove(trans)
                 all_trans.remove(trans)
 
@@ -470,7 +555,7 @@ class MCMCAdapt:
                     if inp_trans.condition == trans.condition:
                         modified_linked[inp_trans] = inp_trans.target
 
-                        TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
+                        TS.transitions[str(inp_trans.source.id)][str(inp_trans.target.id)].remove(inp_trans)
                         if trans.target == state:
                             inp_trans.target = inp_trans.source
                             inp_trans.target_id = inp_trans.source_id
@@ -542,7 +627,6 @@ class MCMCAdapt:
                 if trans.target is not None:
                     mod_tracker.update_mod_tracker(trans)
 
-            print("undone replacing state")
         elif selection == 2:  # undo modify existing transition
             #print("undoing that modification")
             target = undoable[1][0]
@@ -594,7 +678,50 @@ class MCMCAdapt:
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition, deleted=True)
 
-        elif selection == 5:  # add state
+        elif selection == 5:  # insert state
+
+            state = undoable[1][0]
+            transitions = undoable[1][1]
+            trans_to_modify = undoable[1][2]
+            source_state = undoable[1][3]
+            target_state = undoable[1][4]
+
+            all_states.remove(state)
+            TS.states.pop(state.name)
+            added_states.remove(state)
+
+            # remove from transitions
+            TS.transitions.pop(str(state.id))
+            for st_old in TS.states:
+                TS.transitions[str(TS.states[st_old].id)].pop(str(state.id))
+
+            for trans in transitions:
+                all_trans.remove(trans)
+                target_state.in_trans.remove(trans)
+
+            '''
+            NOW WE MUST ADD THE OLD INPUT TRANSITIONS TO THE TARGET STATE
+            '''
+            for trans in trans_to_modify:
+                target_state.in_trans.append(trans)
+                trans.target = target_state
+                trans.target_id = target_state.id
+
+
+            '''
+            NOW WE MUST MODIFY THE TRANS_TO_MODIFY
+            '''
+            for trans in trans_to_modify:
+                mod_tracker.update_mod_tracker(trans)
+
+            '''
+            NOW WE MUST MODIFY THE TRANSITIONS DATASTRUCTURE TO REFLECT THE CHANGES
+            '''
+            # remove the transitions from the old
+            for trans in trans_to_modify:
+                TS.transitions[str(source_state.id)][str(target_state.id)].append(trans)
+
+            '''
             #print("undoing the addition of that state")
             state = undoable[1][0]
             transitions = undoable[1][1]
@@ -609,6 +736,8 @@ class MCMCAdapt:
                 transition.source.out_trans.remove(transition)
                 transition.target.in_trans.remove(transition)
                 all_trans.remove(transition)
+
+            '''
 
         elif selection == 6:  # delete existing state
             state = undoable[1][0]
