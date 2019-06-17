@@ -1,0 +1,43 @@
+{"inputs": {"Visitation": 0, "Delivery": 1, "About": 2, "Directions": 3, "Goodbye": 4, "General": 5, "Ignore": 6},
+ "outputs": {"Greeting": {"id":0,"micro":"Greeter", "content":"false", "params":{"Greet_with_speech":"true",
+                                                            "Greet_with_handshake":"false",
+                                                            "Wait_for_response":"true"}
+                       },
+             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"I'm answering your question.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "CanAnswer": {"id":2,"micro":"Remark","content":"false","params":{"content":"I can answer any question that you have right now!",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "ReferToDesk": {"id":3,"micro":"Remark","content":"false","params":{"content":"Go to the desk.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "DeliveryInfo": {"id":4,"micro":"Remark","content":"false","params":{"content":"For deliveries, go to the desk.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "PromptToAsk": {"id":5,"micro":"Remark","content":"false","params":{"content":"I can answer questions about things like X Y Z!",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "DirectionsForListening": {"id":6,"micro":"Remark","content":"false","params":{"content":"When my eyes turn green, that means I'm listening.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "Listening": {"id":7,"micro":"Wait","content":"false","params":{"look_at_people":"true",
+                                                                                 "allow_speech": "true",
+                                                                                 "wait time (seconds)": "10"}
+                        },
+             "FunFacts": {"id":8,"micro":"Remark","content":"false","params":{"content":"Here's a fun fact for ya!",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "Farewell": {"id":9,"micro":"Farewell","content":"false","params":{}
+                        }
+            },
+ "topic_keywords": {},
+ "mod_percent": 0.1,
+ "time_mcmc": 500000}

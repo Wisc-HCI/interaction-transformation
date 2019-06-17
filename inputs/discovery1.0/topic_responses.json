@@ -1,0 +1,17 @@
+{"weather": ["I'm not connected to the internet, so I'm not really sure. My best guess is that it's a little bit chilly. Probably will warm up soon.", "I don't know, I'm not connected to the internet! It's kinda chilly."],
+ "jokes": ["Why was the robot mad? People kept pushing its buttons."],
+ "hello": ["Hi!", "Hi, my name is Nao!"],
+ "goodbye": ["See you later!", "Catch you on the flippity flop!"],
+ "sports": ["I'm a big fan of the Wisconsin Badgers!"],
+ "about": ["My name is Nao! I was produced by a French company called Aldebaran, which was acquired by Softbank robotics. I can have conversations, tell jokes, and even dance!"],
+ "eat": ["One restaurant I recommend is the Old Fashioned. It's right down the street from here! I heard they have really good beer, but David won't let me have alcohol.",
+         "One restaurant I recommend is on state street, it's called short stack eatery! I heard they have great pancakes, but I wouldn't know. I can't eat.",
+         "If you like Sushi, you should check out RED! It's on Washington and Henry.",
+         "One restaurant I recommend on Willy Street is Hah Long Bay. It's great southeast asian cuisine. Definitely check it out.",
+         "If you're ever around Monroe street and in the mood for pizza, you should check out Pizza Broota. Pizza would be my favorite food, if I could eat. But I physically cannot eat. It's tragic.",
+         "If you're ever around lake and state street, check out the food carts. The food is delicious and affordable, so I've heard. I'm unable to taste anything, and money holds no meaning for me.",
+         "One restaurant I recommend is Lombardino's, on Highland and University. It's great italian cuisine. I always get the angel hair pasta when I go there. Just kidding, I physically can't eat."],
+ "dance": ["You can tell me to dance if you want!"],
+ "general": ["Hmm. I didn't really understand what you said there.",
+             "I didn't really get that. Can you say it again?"]
+}

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nta>
+
+	<name>discovery_task</name>
+
+	<group id="0" init="true" final="false" x="182.0" y="134.0">
+		<name>Greeting</name>
+		<micro>
+			<name>Greeter</name>
+			<parameter type="bool" val="true">Greet_with_speech</parameter>
+			<parameter type="bool" val="false">Greet_with_handshake</parameter>
+			<parameter type="bool" val="true">Wait_for_response</parameter>
+		</micro>
+
+	</group>
+
+	<group id="5" init="false" final="true" x="675.0" y="270.0">
+		<name>Farewell</name>
+		<micro>
+			<name>Farewell</name>
+		</micro>
+
+	</group>
+
+	<group id="1" init="false" final="true" x="675.0" y="270.0">
+		<name>ReferToDesk</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="str" val="Go to the desk.">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+		</micro>
+
+	</group>
+
+	<group id="2" init="false" final="true" x="675.0" y="270.0">
+		<name>HandleDelivery</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="str" val="For deliveries, go to the desk.">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+		</micro>
+
+	</group>
+
+	<group id="3" init="false" final="true" x="675.0" y="270.0">
+		<name>PromptToAsk</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="str" val="I can answer questions about things like X Y Z!">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+		</micro>
+
+	</group>
+
+	<group id="4" init="false" final="true" x="675.0" y="270.0">
+		<name>AnswerQuestion</name>
+		<micro>
+			<name>Remark</name>
+			<parameter type="str" val="I'm answering your question.">content</parameter>
+			<parameter type="bool" val="true">use_gesture</parameter>
+			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+		</micro>
+	</group>
+
+	<!--FROM HELLO STATE-->
+	<transition>
+		<source ref="0"/>
+		<target ref="1"/>
+		<guard condition="human_visitation"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="2"/>
+		<guard condition="human_delivery"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="3"/>
+		<guard condition="human_general"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="4"/>
+		<guard condition="human_about"/>
+		<guard condition="human_directions"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="5"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+  <!--FROM REFERTODESK STATE-->
+	<transition>
+		<source ref="1"/>
+		<target ref="1"/>
+		<guard condition="human_visitation"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="2"/>
+		<guard condition="human_delivery"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="3"/>
+		<guard condition="human_general"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="4"/>
+		<guard condition="human_about"/>
+		<guard condition="human_directions"/>
+	</transition>
+
+	<transition>
+		<source ref="1"/>
+		<target ref="5"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<!--FROM HANDLEDELIVERY STATE-->
+	<transition>
+		<source ref="2"/>
+		<target ref="1"/>
+		<guard condition="human_visitation"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="2"/>
+		<guard condition="human_delivery"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="3"/>
+		<guard condition="human_general"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="4"/>
+		<guard condition="human_about"/>
+		<guard condition="human_directions"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="5"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+  <!--FROM PROMPTTOASK STATE-->
+	<transition>
+		<source ref="3"/>
+		<target ref="1"/>
+		<guard condition="human_visitation"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="2"/>
+		<guard condition="human_delivery"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="3"/>
+		<guard condition="human_general"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_about"/>
+		<guard condition="human_directions"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="5"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+  <!--FROM ANSWERQUESTION STATE-->
+	<transition>
+		<source ref="4"/>
+		<target ref="1"/>
+		<guard condition="human_visitation"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="2"/>
+		<guard condition="human_delivery"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="3"/>
+		<guard condition="human_general"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="4"/>
+		<guard condition="human_about"/>
+		<guard condition="human_directions"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="5"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<design>robot</design>
+</nta>

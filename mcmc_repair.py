@@ -420,7 +420,6 @@ class MCMCAdapt:
             allowable_mods = self.mod_limit - num_mods
             allowed_states = []
 
-
             # randomly pick a state to modify
             state = random.choice(all_states)
             curr_state_name = state.name
