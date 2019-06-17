@@ -120,16 +120,15 @@ class MCMCAdapt:
                 break
 
             # calculate the initial reward
-            distance = self.TS.get_distance(TS)
+            #distance = self.TS.get_distance(TS)
+            distance = mod_tracker.check_mod_tracker_sum()
             print("DISTANCE {}".format(distance))
             sat_ratio = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
             unweighted_rew_vect = []
-            probs_vect = []
             traj_status = {}
-            path_traversal.check(unweighted_rew_vect, probs_vect, traj_status)
+            path_traversal.check(unweighted_rew_vect, traj_status)
             print(unweighted_rew_vect)
-            print(probs_vect)
             print(traj_status)
             #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
             reward_vect = unweighted_rew_vect
@@ -188,7 +187,8 @@ class MCMCAdapt:
 
                 # calculate the reward
                 bin_time = time.time()
-                new_distance = self.TS.get_distance(TS)
+                #new_distance = self.TS.get_distance(TS)
+                new_distance = mod_tracker.check_mod_tracker_sum()
 
                 '''
                 THREADABLE (divide the trajectories)
@@ -196,9 +196,8 @@ class MCMCAdapt:
                 '''
                 path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
                 unweighted_rew_vect = []
-                probs_vect = []
                 traj_status = {}
-                path_traversal.check(unweighted_rew_vect, probs_vect, traj_status)
+                path_traversal.check(unweighted_rew_vect, traj_status)
                 '''
                 path_traversal_1 = PathTraversal(TS, trajs_split[0], self.freqs, removed_transitions)
                 path_traversal_2 = PathTraversal(TS, trajs_split[1], self.freqs, removed_transitions)
@@ -280,7 +279,7 @@ class MCMCAdapt:
 
             print("MCMC steps: {}".format(i))
             print(time_bins)
-            #exit()
+            exit()
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print("the best design from this iteration is shown below")
             print(str(best_design[0]))
@@ -338,7 +337,7 @@ class MCMCAdapt:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         traj_status = {}
-        path_traversal.check([], [], traj_status)
+        path_traversal.check([], traj_status)
         self.update_trace_panel(traj_status)
 
         # output a pickle file with more traj status

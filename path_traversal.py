@@ -6,7 +6,7 @@ class PathTraversal:
         self.freqs = freqs
         self.removed_transitions = removed_transitions
 
-    def check(self, sats, probs,trajectory_status):
+    def check(self, sats, trajectory_status):
 
         # create a temporary dictionary of dict[source_state][condition] = target_state
         cond_dict = {}
@@ -41,7 +41,6 @@ class PathTraversal:
                 test_out = vect[i][1].type
 
                 if inp in cond_dict[curr_st] and cond_dict[curr_st][inp] == test_out:
-                    probability *= self.freqs.probs[curr_st.micros[0]["name"]][inp]
                     curr_st = name2state_dict[test_out]
                 else:
                     sat = False
@@ -80,7 +79,6 @@ class PathTraversal:
                 #print("sat")
                 trajectory_status[traj] = traj.reward
                 sats.append(traj.reward)
-                probs.append(probability)
 
         #exit(0)
         #return sats, probs, trajectory_status
