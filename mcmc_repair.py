@@ -1,9 +1,10 @@
 import random
 import time
 import numpy as np
-import threading
+from threading import Thread
 import importlib
 import pickle
+import math
 
 from state_machine import *
 from path_traversal import *
@@ -39,7 +40,10 @@ class MCMCAdapt:
         #allowable_time = 319.91643850803376
         #allowable_time = 98.7957421541214
         #allowable_time = 0.18487918376922607
-        allowable_time = 0.010
+        allowable_time = 1
+
+        # for speeding up the program
+        time_bins = [0,0,0,0]
 
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
@@ -84,6 +88,13 @@ class MCMCAdapt:
         i=0
         result = 0
 
+        # split the trajectories
+        nt = len(self.trajs)
+        quarter = int(math.floor(nt/4))
+        half = int(math.floor(nt/2))
+        three_quarters = int(math.floor(nt*0.75))
+        trajs_split = [self.trajs[0:quarter], self.trajs[quarter:half], self.trajs[half:three_quarters], self.trajs[three_quarters:]]
+
         # we cap the time at 12 hours
         lowbound_time = time.time()
         best_result = -1
@@ -110,9 +121,13 @@ class MCMCAdapt:
 
             # calculate the initial reward
             distance = self.TS.get_distance(TS)
+            print("DISTANCE {}".format(distance))
             sat_ratio = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
-            unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
+            unweighted_rew_vect = []
+            probs_vect = []
+            traj_status = {}
+            path_traversal.check(unweighted_rew_vect, probs_vect, traj_status)
             print(unweighted_rew_vect)
             print(probs_vect)
             print(traj_status)
@@ -144,12 +159,15 @@ class MCMCAdapt:
                 if curr_time - lowbound_time >= break_time: #43200
                     break
 
+                bin_time = time.time()
                 plot_data["rewards"].append(sum(reward_vect))
                 plot_data["progress"].append(best_design[2])
                 plot_data["cost"].append(precost)
                 plot_data["props"].append(sat_ratio)
                 plot_data["distances"].append(distance)
                 plot_data["time"].append(curr_time)
+                new_bin_time = time.time()
+                time_bins[0] += (new_bin_time-bin_time)
 
                 #time_elapsed = curr_time - start_time
                 #if miter > allowable_time or sum(reward_vect) == max_possible_reward:
@@ -163,17 +181,72 @@ class MCMCAdapt:
                     distance_plotter.update_graph(plot_data["distances"])
                     break
 
+                bin_time = time.time()
                 undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
+                new_bin_time = time.time()
+                time_bins[1] += (new_bin_time-bin_time)
 
                 # calculate the reward
+                bin_time = time.time()
                 new_distance = self.TS.get_distance(TS)
+
+                '''
+                THREADABLE (divide the trajectories)
+                create 4 threads
+                '''
                 path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
-                unweighted_rew_vect, probs_vect, traj_status = path_traversal.check()
+                unweighted_rew_vect = []
+                probs_vect = []
+                traj_status = {}
+                path_traversal.check(unweighted_rew_vect, probs_vect, traj_status)
+                '''
+                path_traversal_1 = PathTraversal(TS, trajs_split[0], self.freqs, removed_transitions)
+                path_traversal_2 = PathTraversal(TS, trajs_split[1], self.freqs, removed_transitions)
+                path_traversal_3 = PathTraversal(TS, trajs_split[2], self.freqs, removed_transitions)
+                path_traversal_4 = PathTraversal(TS, trajs_split[3], self.freqs, removed_transitions)
+
+                sats_1 = []
+                probs_1 = []
+                trajectory_status_1 = {}
+                thread_1 = Thread(target=path_traversal_1.check, args=(sats_1, probs_1, trajectory_status_1,))
+                thread_1.start()
+
+                sats_2 = []
+                probs_2 = []
+                trajectory_status_2 = {}
+                thread_2 = Thread(target=path_traversal_2.check, args=(sats_2, probs_2, trajectory_status_2,))
+                thread_2.start()
+
+                sats_3 = []
+                probs_3 = []
+                trajectory_status_3 = {}
+                thread_3 = Thread(target=path_traversal_3.check, args=(sats_3, probs_3, trajectory_status_3,))
+                thread_3.start()
+
+                sats_4 = []
+                probs_4 = []
+                trajectory_status_4 = {}
+                thread_4 = Thread(target=path_traversal_4.check, args=(sats_4, probs_4, trajectory_status_4,))
+                thread_4.start()
+
+                r_1 = thread_1.join()
+                r_2 = thread_2.join()
+                r_3 = thread_3.join()
+                r_4 = thread_4.join()
+
+                unweighted_rew_vect = sats_1 + sats_2 + sats_3 + sats_4
+                '''
+                '''
+                END THREADABLE
+                '''
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
                 total_reward = sum(new_reward_vect)
                 postcost = self.get_cost(new_reward_vect,distance)
+                new_bin_time = time.time()
+                time_bins[2] += (new_bin_time-bin_time)
 
+                bin_time = time.time()
                 alpha = min(1, math.exp(-0.1 * (postcost*1.0/precost)))
                 u = np.random.random()
 
@@ -182,7 +255,7 @@ class MCMCAdapt:
                     reject_counter += 1
                     self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
                 else:
-                    print(TS)
+                    #print(TS)
                     accept_counter += 1
                     precost = postcost
                     reward_vect = new_reward_vect
@@ -202,9 +275,12 @@ class MCMCAdapt:
                 i+=1
 
                 miter += 1
+                new_bin_time = time.time()
+                time_bins[3] += (new_bin_time-bin_time)
 
             print("MCMC steps: {}".format(i))
-            exit()
+            print(time_bins)
+            #exit()
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print("the best design from this iteration is shown below")
             print(str(best_design[0]))
@@ -261,7 +337,8 @@ class MCMCAdapt:
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
-        _,_,traj_status = path_traversal.check()
+        traj_status = {}
+        path_traversal.check([], [], traj_status)
         self.update_trace_panel(traj_status)
 
         # output a pickle file with more traj status
@@ -285,9 +362,15 @@ class MCMCAdapt:
 
         # choose modification -- existing state, existing transition, remove transition, add transition, add state, remove state
         '''
+        PROBLEMS:
+            - once you modify a state, there's no going back (DONE. validate this works please)
+            - need to make all probabilities equal
+        '''
+
+        '''
         needs to be "else choose the number of modified states"
         '''
-        num_state_mods = len(all_states) if num_mods < self.mod_limit else 0
+        num_state_mods = 1 if num_mods < self.mod_limit else 0 #len(all_states) if num_mods < self.mod_limit else 0
         '''
         done with potential modifications
         NOTE: what do we do when there are limited modifications that can be made??
@@ -299,6 +382,7 @@ class MCMCAdapt:
         num_state_additions = num_trans if num_mods < self.mod_limit else 0
         num_state_deletions = num_added_states
 
+        '''
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\nNEW MODIFICATION{}".format("   ~~~ mod limited" if mod_limited else ""))
         print("   num mods: {}".format(num_mods))
         print("   mod limit: {}".format(self.mod_limit))
@@ -308,6 +392,7 @@ class MCMCAdapt:
         print("num transition additions: {}".format(num_transition_additions))
         print("num state additions: {}".format(num_state_additions))
         print("num state deletions: {}".format(num_state_deletions))
+        '''
 
         sum_options = 0.0 + num_state_mods + num_transition_mods + num_transition_deletions + num_transition_additions + num_state_additions + num_state_deletions
 
@@ -319,16 +404,24 @@ class MCMCAdapt:
                                                     num_state_additions/sum_options,
                                                     num_state_deletions/sum_options])
 
+        '''
         for transition in removed_transitions:
             for transition2 in removed_transitions:
                 if transition != transition2:
                     if transition.source == transition2.source and transition.condition == transition2.condition:
                         print("problem")
                         exit()
+        '''
 
         undoable = None
         if selection == 1:    # modify existing state
-            print("~CHOICE~: state modification")
+            #print("~CHOICE~: state modification")
+
+            # handle limits to the number of modifications that can be performed
+            allowable_mods = self.mod_limit - num_mods
+            allowed_states = []
+
+
             # randomly pick a state to modify
             state = random.choice(all_states)
             curr_state_name = state.name
@@ -355,7 +448,7 @@ class MCMCAdapt:
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
         elif selection == 2:  # modify existing transition
-            print("~CHOICE~: transition modification")
+            #print("~CHOICE~: transition modification")
             # randomly pick a transition
             if mod_limited:
                 #print(str(mod_tracker))
@@ -385,7 +478,7 @@ class MCMCAdapt:
 
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
-            print("~CHOICE~: transition deletion")
+            #print("~CHOICE~: transition deletion")
             # randomly pick a transition
             if mod_limited:
                 #print(str(mod_tracker))
@@ -412,7 +505,7 @@ class MCMCAdapt:
 
             undoable = (3, (transition, source, target))
         elif selection == 4:  # add transition
-            print("~CHOICE~: transition addition")
+            #print("~CHOICE~: transition addition")
             # randomly pick a transition
             if mod_limited:
                 transition = random.choice(mod_tracker.get_mod_tracker_empty_trans(removed_transitions))
@@ -439,7 +532,7 @@ class MCMCAdapt:
 
             undoable = (4, (transition, source, target))
         elif selection == 5:  # insert state
-            print("~CHOICE~: state insertion")
+            #print("~CHOICE~: state insertion")
             '''
             # DECIDE ON WHERE TO INSERT THE STATE
             '''
@@ -530,7 +623,7 @@ class MCMCAdapt:
 
             undoable = (5, (state, transitions, trans_to_modify, source_state, target_state))
         elif selection == 6:  # delete existing state
-            print("~CHOICE~: state deletion")
+            #print("~CHOICE~: state deletion")
             # choose a state
             state = random.choice(added_states)
             #print("deleting existing state: {}".format(state.name))

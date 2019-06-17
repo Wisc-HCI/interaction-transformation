@@ -6,11 +6,22 @@ class PathTraversal:
         self.freqs = freqs
         self.removed_transitions = removed_transitions
 
-    def check(self):
+    def check(self, sats, probs,trajectory_status):
 
-        sats = []
-        probs = []
-        trajectory_status = {}
+        # create a temporary dictionary of dict[source_state][condition] = target_state
+        cond_dict = {}
+        name2state_dict = {}
+        ts_states = self.TS.states
+        for state_name in ts_states:
+            state = ts_states[state_name]
+            cond_dict[state] = {}
+            for out_trans in state.out_trans:
+                cond_dict[state][out_trans.condition] = out_trans.target.micros[0]["name"]
+            name2state_dict[state.micros[0]["name"]] = state
+
+        #sats = []
+        #probs = []
+        #trajectory_status = {}
         for traj in self.trajectories:
             vect = traj.vect
 
@@ -29,6 +40,15 @@ class PathTraversal:
                 inp = vect[i][0].type
                 test_out = vect[i][1].type
 
+                if inp in cond_dict[curr_st] and cond_dict[curr_st][inp] == test_out:
+                    probability *= self.freqs.probs[curr_st.micros[0]["name"]][inp]
+                    curr_st = name2state_dict[test_out]
+                else:
+                    sat = False
+                    trajectory_status[traj] = 0
+                    break
+
+                '''
                 path_exists = False
                 path_trans = None
                 for trans in curr_st.out_trans:
@@ -44,6 +64,7 @@ class PathTraversal:
                     break
                 else:
                     curr_st = path_trans.target
+                '''
 
             # double check that the final state is actually possible
             if sat and not traj.is_prefix:
@@ -62,4 +83,4 @@ class PathTraversal:
                 probs.append(probability)
 
         #exit(0)
-        return sats, probs, trajectory_status
+        #return sats, probs, trajectory_status

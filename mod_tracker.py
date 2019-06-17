@@ -9,28 +9,28 @@ class ModificationTracker:
                 for trans in state.out_trans:
                     if trans.condition == inp:
                         dest = trans.target
-                        dest_properties = dest.name
+                        dest_properties = dest.micros[0]["name"]
                 #self.mod_tracker[(state,inp)] = [0,dest]
                 self.mod_tracker[(state,inp)] = [0,dest_properties]
 
     def update_mod_tracker(self, transition, deleted=False):
         if (transition.source, transition.condition) not in self.mod_tracker:
-            print("   MC: returning prematurely")
+            #print("   MC: returning prematurely")
             return
 
         if deleted and self.mod_tracker[(transition.source,transition.condition)][1] is None:
             self.mod_tracker[(transition.source,transition.condition)][0] = 0
-            print("   MC: deleting, but it was meant to be deleted anyway........")
+            #print("   MC: deleting, but it was meant to be deleted anyway........")
         elif deleted:
             self.mod_tracker[(transition.source,transition.condition)][0] = 1
-            print("   MC: deleting, it was NOT meant to be")
+            #print("   MC: deleting, it was NOT meant to be")
         #elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target:
-        elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target.name:
+        elif self.mod_tracker[(transition.source,transition.condition)][1] == transition.target.micros[0]["name"]:
             self.mod_tracker[(transition.source,transition.condition)][0] = 0
-            print("   MC: not deleting, and it was meant to be")
+            #print("   MC: not deleting, and it was meant to be")
         else:
             self.mod_tracker[(transition.source,transition.condition)][0] = 1
-            print("   MC: it was NOT meant to be")
+            #print("   MC: it was NOT meant to be")
 
     def check_mod_tracker_sum(self):
         sum = 0
