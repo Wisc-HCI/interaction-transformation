@@ -95,15 +95,8 @@ class Reader:
                 target = i.attrib["ref"]
             for i in transition.iterfind("guard"):
 
-                if i.attrib["condition"] == "human_ready":
-                    condition = "Ready"
-                elif i.attrib["condition"] == "human_busy":
-                    condition = "Ignore"
-                elif i.attrib["condition"] == "human_ignore":
-                    condition = "Ignore"
-                else:
-                    print("ERROR: unknown human condition")
-                    exit(1)
+                raw_condition = i.attrib["condition"]
+                condition = raw_condition[raw_condition.index("_")+1].upper() + raw_condition[raw_condition.index("_")+2:]
                 transitions[source][target].append(Transition(source, target, condition))
 
         # build

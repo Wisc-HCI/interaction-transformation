@@ -279,7 +279,7 @@ class MCMCAdapt:
 
             print("MCMC steps: {}".format(i))
             print(time_bins)
-            exit()
+            #exit()
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print("the best design from this iteration is shown below")
             print(str(best_design[0]))
