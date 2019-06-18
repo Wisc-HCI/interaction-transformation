@@ -44,8 +44,7 @@ class Controller:
         self.trajs = []
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
         TraceGenerator = tracegen_module.TraceGenerator
-        sampler_module = importlib.import_module("inputs.{}.sampler".format(path_to_interaction))
-        tracegen = TraceGenerator(self.TS, self.inputs.alphabet, self.outputs.alphabet, sampler_module)
+        tracegen = TraceGenerator(self.TS, self.inputs.alphabet, self.outputs.alphabet)
         self.trajs = self.trajs + tracegen.get_trajectories(100)
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
         #    pickle.dump(self.trajs,fp)
