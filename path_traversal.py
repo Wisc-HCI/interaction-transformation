@@ -10,14 +10,12 @@ class PathTraversal:
 
         # create a temporary dictionary of dict[source_state][condition] = target_state
         cond_dict = {}
-        name2state_dict = {}
         ts_states = self.TS.states
         for state_name in ts_states:
             state = ts_states[state_name]
             cond_dict[state] = {}
             for out_trans in state.out_trans:
-                cond_dict[state][out_trans.condition] = out_trans.target.micros[0]["name"]
-            name2state_dict[state.micros[0]["name"]] = state
+                cond_dict[state][out_trans.condition] = (out_trans.target.micros[0]["name"],out_trans.target)
 
         #sats = []
         #probs = []
@@ -40,17 +38,20 @@ class PathTraversal:
                 inp = vect[i][0].type
                 test_out = vect[i][1].type
 
-                if inp in cond_dict[curr_st] and cond_dict[curr_st][inp] == test_out:
-                    curr_st = name2state_dict[test_out]
+
+                if inp in cond_dict[curr_st] and cond_dict[curr_st][inp][0] == test_out:
+                    curr_st = cond_dict[curr_st][inp][1]
                 else:
                     sat = False
                     trajectory_status[traj] = 0
                     break
 
+
                 '''
                 path_exists = False
                 path_trans = None
                 for trans in curr_st.out_trans:
+                    print(trans.target.micros[0]["name"])
                     if trans.condition == inp and trans.target.micros[0]["name"] == test_out:
                         path_exists = True
                         path_trans = trans
@@ -63,6 +64,8 @@ class PathTraversal:
                     break
                 else:
                     curr_st = path_trans.target
+                    print(curr_st)
+                    print("~~~~~~~")
                 '''
 
             # double check that the final state is actually possible
