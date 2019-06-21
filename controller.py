@@ -8,6 +8,7 @@ from z3_adapt import *
 from json_exporter import *
 from verification.prism_util import *
 from reader import *
+from trajectory_builder import *
 import util
 import pickle
 
@@ -41,11 +42,19 @@ class Controller:
         # generate FAKE sample traces
         # with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
+        # NOTE: COMMENT OUT IF NOT DEBUGGING
+        #tb = TrajectoryBuilder()
+        #self.trajs = tb.session()
+
+        # artificially make trajectories
+
         self.trajs = []
+        '''
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
         TraceGenerator = tracegen_module.TraceGenerator
         tracegen = TraceGenerator(self.TS, self.inputs.alphabet, self.outputs.alphabet)
         self.trajs = self.trajs + tracegen.get_trajectories(100)
+        '''
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
         #    pickle.dump(self.trajs,fp)
         self.consolidate_trajectories()
@@ -189,6 +198,15 @@ class Controller:
         self.consolidated_trajs = []
         for traj,vect in self.consolidated_traj_dict.items():
             self.consolidated_trajs.append(vect[0])
+
+    def add_trajs(self, trajs_to_add):
+        self.trajs += trajs_to_add
+        self.consolidate_trajectories()
+        
+        # calculate frequencies associated with states
+        self.freqs.build_ds(self.inputs, self.outputs)
+        self.freqs.calculate_freqs(self.trajs)
+        self.freqs.calculate_probabilities(self.inputs, self.outputs)
 
     def print_trajs(self, trajs):
         for traj in trajs:

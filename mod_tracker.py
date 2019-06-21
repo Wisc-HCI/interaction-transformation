@@ -1,7 +1,10 @@
 class ModificationTracker:
 
-    def __init__(self, TS, inputs):
+    def __init__(self):
         self.mod_tracker = {}
+
+    def reset_tracker(self, TS, inputs):
+        self.mod_tracker.clear()
         for state in TS.states.values():
             for inp in inputs.alphabet:
                 dest_properties = None

@@ -28,23 +28,12 @@ class MCMCAdapt:
         self.path_to_interaction = path_to_interaction
         self.algorithm=algorithm
 
-        self.mod_limit = int(round(mod_perc*(2*len(self.TS.states))))
+        self.mod_limit = int(round(mod_perc*(len(self.inputs.alphabet)*len(self.TS.states))))
         #self.mod_limit = int(round(mod_perc*(14)))
 
         self.setup_helper = SMTSetup()
 
-    def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
-        start_time = time.time()
-
-        #allowable_time = num_itr
-        #allowable_time = 319.91643850803376
-        #allowable_time = 98.7957421541214
-        #allowable_time = 0.18487918376922607
-        allowable_time = 1
-
-        # for speeding up the program
-        time_bins = [0,0,0,0]
-
+    def reset_TS(self, mod_tracker):
         TS = self.TS.copy()
         SMUtil().build(TS.transitions, TS.states)
 
@@ -74,7 +63,27 @@ class MCMCAdapt:
                     removed_transitions.append(new_trans)
 
         # set up the modification tracker dataset
-        mod_tracker = ModificationTracker(TS,self.inputs)
+        mod_tracker.reset_tracker(TS,self.inputs)
+
+        return TS, all_trans, all_states, added_states, removed_transitions
+
+    def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
+        start_time = time.time()
+
+        #allowable_time = num_itr
+        #allowable_time = 319.91643850803376
+        #allowable_time = 98.7957421541214
+        #allowable_time = 0.18487918376922607
+        allowable_time = 1
+
+        # for speeding up the program
+        time_bins = [0,0,0,0]
+
+        # set up the modification tracker dataset
+        mod_tracker = ModificationTracker()
+
+        # copy the TS
+        TS, all_trans, all_states, added_states, removed_transitions = self.reset_TS(mod_tracker)
 
         # setup LTL property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
@@ -261,7 +270,7 @@ class MCMCAdapt:
                     distance = new_distance
 
                     # check if we have encountered the best design
-                    if total_reward >= best_design[2]:
+                    if total_reward > best_design[2]:    # ensuring that benign changes don't get made
                         #print("BEST DESIGN!")
                         best_design[0] = TS.copy()
                         #best_design[1] = [trans for trans in removed_transitions]
@@ -309,6 +318,9 @@ class MCMCAdapt:
                 counter += 1
 
             print("rew vect pre correctness: {}".format(reward_vect))
+
+            # reset the TS
+            TS, all_trans, all_states, added_states, removed_transitions = self.reset_TS(mod_tracker)
 
             #for traj in self.trajs:
             #    print(traj.comparable_string())
@@ -934,4 +946,7 @@ class MCMCAdapt:
                 print(item)
                 exit(1)
 
-        return Trajectory(traj_vect, reward, is_prefix, is_correctness=True)
+        trajectory_to_return = Trajectory(traj_vect, reward, is_prefix, is_correctness=True)
+        print(trajectory_to_return)
+
+        return trajectory_to_return

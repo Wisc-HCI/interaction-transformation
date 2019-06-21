@@ -11,6 +11,8 @@ from PyQt5 import QtCore
 from controller import *
 from plot_window import *
 
+from trajectory_builder import *
+
 class App(QMainWindow):
 
     '''
@@ -111,6 +113,8 @@ class App(QMainWindow):
         self.control_panel.setFrameShape(QFrame.Box)
         self.control_buttons = QLabel(parent=self.control_panel)
         self.control_buttons.setGeometry(0,0,400,100)
+
+        # the adapt button
         self.adapt_button = QPushButton("Adapt", self.control_buttons)
         self.adapt_button.setGeometry(10, 10, 80, 50)
         self.adapt_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(255, 150, 0);}
@@ -121,6 +125,14 @@ class App(QMainWindow):
             self.adapt_button.clicked.connect(self.random_adapt)
         elif self.algorithm == "smt":
             self.adapt_button.clicked.connect(self.z3_adapt)
+
+        # the add trajectories button
+        self.traj_build_button = QPushButton("Traj Build", self.control_buttons)
+        self.traj_build_button.setGeometry(100, 10, 80, 50)
+        self.traj_build_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(255, 0, 150);}
+                                     .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(200, 0, 150);}""")
+        self.traj_build_button.clicked.connect(self.init_traj_builder)
+
 
         self.trace_panel = QScrollArea(parent = self.control_panel)
         self.trace_panel.setGeometry(10,110,380,self.height - 220)
@@ -205,6 +217,14 @@ class App(QMainWindow):
         self.adapter.z3_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
         #self.json_exp.export_from_z3(solution)
         self.load_graph()
+
+    def init_traj_builder(self):
+        tb = TrajectoryBuilder(self.adapter.inputs, self.adapter.outputs)
+        tb.exec_()
+        rval = tb.rval
+        if rval is None:
+            return
+        self.adapter.add_trajs(rval)
 
 if __name__ == "__main__":
 
