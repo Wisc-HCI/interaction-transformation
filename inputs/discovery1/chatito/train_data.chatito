@@ -1,0 +1,100 @@
+%[Visitation]('training': '224')
+    ~[state here to visit]
+    ~[request to visit]
+%[Delivery]('training': '224')
+    ~[state here to deliver]
+    ~[request to deliver]
+%[About]('training': '18')
+    ~[building_history]
+    ~[parking]
+%[Directions]('training': '12')
+    Can you tell me where @[locations] is
+    Where is @[locations]
+    Could you point me to @[locations]
+%[Hello]('training': '45')
+    Hello ~[robot names?]
+    Hi ~[robot names?]
+    Whats up ~[robot names?]
+    How are you doing ~[robot names?]
+    Greetings ~[robot names?]
+    How do you do ~[robot names?]
+    Hey ~[robot names?]
+    Hows it going ~[robot names?]
+    Hi there ~[robot names?]
+%[Goodbye]('training': '16')
+    goodbye
+    ~[sounds_like_bye?] ~[sounds_like_bye]
+    see you later
+    farewell
+    until next time
+~[state here to visit]
+    ~[I am] here to ~[visit] @[visitation_subject]
+    ~[I am] going to ~[visit] @[visitation_subject]
+    I want to ~[visit] @[visitation_subject]
+    I want to ~[check in]
+    ~[I am] here to ~[check in]
+    ~[I am] going to ~[check in]
+~[request to visit]
+    Can I ~[check in]
+    Can I ~[visit] @[visitation_subject]
+~[state here to deliver]
+    ~[I am] here to ~[deliver something]
+    ~[I am] going to ~[deliver something]
+    I want to ~[deliver something]
+~[request to deliver]
+    ~[deliver something]
+@[visitation_subject]
+    Professor X
+    someone
+    my friend
+    a friend
+    a professor
+    my professor
+@[locations]
+    upstairs
+    room 300
+    parking
+    nearby restaurants
+~[check in]
+    check in
+    get through
+    get checked in
+    go upstairs
+~[visit]
+    check in to visit
+    check in to see
+    visit
+    see
+~[deliver something]
+    make a delivery
+    deliver a package
+    deliver mail
+    deliver something
+    make a delivery to @[visitation_subject]
+    deliver a package to @[visitation_subject]
+    deliver mail to @[visitation_subject]
+    deliver something to @[visitation_subject]
+~[I am]
+    I am
+    Im
+    I'm
+~[sounds_like_bye]
+    bye
+    by
+    bi
+~[tell me about]
+    could you tell me about
+    please tell me about
+    tell me about
+    give me information about
+~[building_history]
+    ~[tell me about] the history of this building
+    ~[tell me about] this buildings history
+~[parking]
+    ~[tell me about?] where can I park
+    ~[tell me about?] where can I find parking
+~[robot names]
+    robot
+    nao
+    now
+    you

@@ -109,13 +109,18 @@ class TrajectoryReader:
     def __init__(self, picklename):
         self.picklename = picklename
 
-    def get_trajectories(self):
+    def get_trajectories(self, py2=False):
 
         trajs = []
 
         with open(self.picklename, "rb") as infile:
-            raw_trajs = pickle.load(infile, encoding='bytes')
+            if py2:
+                raw_trajs = pickle.load(infile)
+            else:
+                raw_trajs = pickle.load(infile, encoding='bytes')
 
+            print("TRAJS:")
+            print(raw_trajs)
             for raw_traj in raw_trajs:
                 _ = raw_traj.pop(-1) # end time
                 _ = raw_traj.pop(-1) # start time
@@ -127,18 +132,20 @@ class TrajectoryReader:
                 is_correctness = raw_traj.pop(-1)
                 is_prefix = raw_traj.pop(-1)
                 score = raw_traj.pop(-1)
+                print(raw_traj)
 
-                traj_vect = [(HumanInput("Ready"),Microinteraction(raw_traj[0][0]))]
+                traj_vect = [(HumanInput("General"),Microinteraction(raw_traj[0][0]))]
 
                 i = 1
                 while i < len(raw_traj)-1:
 
                     micro = Microinteraction(raw_traj[i+1][0])
-                    raw_human_input = raw_traj[i][-1]
-                    if raw_human_input.decode("utf-8")  == "human_ready":
-                        inp = "Ready"
-                    else:
-                        inp = "Ignore"
+                    raw_human_input = raw_traj[i][-1].decode("utf-8")
+                    inp = raw_human_input[raw_human_input.index("_")+1].upper() + raw_human_input[raw_human_input.index("_")+2:]
+                    #if raw_human_input.decode("utf-8")  == "human_ready":
+                    #    inp = "Ready"
+                    #else:
+                    #    inp = "Ignore"
                     human_input = HumanInput(inp)
 
                     item = (human_input,micro)
@@ -146,6 +153,15 @@ class TrajectoryReader:
 
                     i += 2
 
-                trajs.append(Trajectory(traj_vect,score,is_prefix,is_correctness))
+                # set up the end of the trajectory
+                raw_human_input = raw_traj[-1][-1].decode("utf-8")
+                inp = raw_human_input[raw_human_input.index("_")+1].upper() + raw_human_input[raw_human_input.index("_")+2:]
+                human_input = HumanInput(inp)
+                micro = Microinteraction("END")
+                traj_vect.append((human_input,micro))
+
+                trajectory = Trajectory(traj_vect,score,is_prefix,is_correctness)
+                print(trajectory)
+                trajs.append(trajectory)
 
         return trajs
