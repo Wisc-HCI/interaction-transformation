@@ -19,7 +19,7 @@
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "PromptToAsk": {"id":5,"micro":"Remark","content":"false","params":{"content":"I can answer questions about things like the history of the building, or parking!",
+             "PromptToAsk": {"id":5,"micro":"Remark","content":"false","params":{"content":"Why don't you try asking me about things like the history of the building, or parking!",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },

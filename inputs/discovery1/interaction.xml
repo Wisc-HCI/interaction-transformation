@@ -26,7 +26,7 @@
 		<name>ReferToDesk</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="Go to the desk.">content</parameter>
+			<parameter type="str" val="To visit someone in the discovery building, please speak to an actual human being behind the desk.">content</parameter>
 			<parameter type="bool" val="true">use_gesture</parameter>
 			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
 		</micro>
@@ -37,7 +37,7 @@
 		<name>HandleDelivery</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="For deliveries, go to the desk.">content</parameter>
+			<parameter type="str" val="To find out about deliveries, please speak to an actual human being behind the desk.">content</parameter>
 			<parameter type="bool" val="true">use_gesture</parameter>
 			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
 		</micro>
@@ -48,7 +48,7 @@
 		<name>PromptToAsk</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="I can answer questions about things like X Y Z!">content</parameter>
+			<parameter type="str" val="Why don't you try asking me about things like the history of the building, or parking!">content</parameter>
 			<parameter type="bool" val="true">use_gesture</parameter>
 			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
 		</micro>
@@ -59,7 +59,7 @@
 		<name>AnswerQuestion</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="I'm answering your question.">content</parameter>
+			<parameter type="str" val="Placeholder for question answering.">content</parameter>
 			<parameter type="bool" val="true">use_gesture</parameter>
 			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
 		</micro>
