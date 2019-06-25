@@ -3,7 +3,7 @@
                                                             "Greet_with_handshake":"false",
                                                             "Wait_for_response":"true"}
                        },
-             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"I'm answering your question.",
+             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"Placeholder for question answering.",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
@@ -11,15 +11,15 @@
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "ReferToDesk": {"id":3,"micro":"Remark","content":"false","params":{"content":"Go to the desk.",
+             "ReferToDesk": {"id":3,"micro":"Remark","content":"false","params":{"content":"To visit someone in the discovery building, please speak to an actual human being behind the desk.",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "DeliveryInfo": {"id":4,"micro":"Remark","content":"false","params":{"content":"For deliveries, go to the desk.",
+             "DeliveryInfo": {"id":4,"micro":"Remark","content":"false","params":{"content":"To find out about deliveries, please speak to an actual human being behind the desk.",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "PromptToAsk": {"id":5,"micro":"Remark","content":"false","params":{"content":"I can answer questions about things like X Y Z!",
+             "PromptToAsk": {"id":5,"micro":"Remark","content":"false","params":{"content":"I can answer questions about things like the history of the building, or parking!",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
