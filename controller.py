@@ -202,7 +202,7 @@ class Controller:
     def add_trajs(self, trajs_to_add):
         self.trajs += trajs_to_add
         self.consolidate_trajectories()
-        
+
         # calculate frequencies associated with states
         self.freqs.build_ds(self.inputs, self.outputs)
         self.freqs.calculate_freqs(self.trajs)

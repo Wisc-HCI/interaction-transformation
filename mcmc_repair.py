@@ -13,6 +13,7 @@ from reachability_checker import *
 from mod_tracker import *
 from smt_setup import *
 from interaction_components import Trajectory, HumanInput, Microinteraction
+from verification.model_checker import *
 import util
 
 class MCMCAdapt:
@@ -32,6 +33,16 @@ class MCMCAdapt:
         #self.mod_limit = int(round(mod_perc*(14)))
 
         self.setup_helper = SMTSetup()
+
+        '''
+        Get the properties file
+        '''
+        prop_strings = []
+        with open("inputs/{}/properties.txt".format(path_to_interaction), "r") as propfile:
+            for line in propfile:
+                prop_strings.append(line)
+
+        self.model_checker = ModelChecker(prop_strings)
 
     def reset_TS(self, mod_tracker):
         TS = self.TS.copy()
@@ -292,8 +303,26 @@ class MCMCAdapt:
             SMUtil().build(best_design[0].transitions, best_design[0].states)
             print("the best design from this iteration is shown below")
             print(str(best_design[0]))
+
+            '''
+            PyNuSMV MODEL CHECKER
+            '''
+            # export the transition system to .smv file
+            self.model_checker.create_and_load_model(best_design[0], best_design[1], self.inputs, self.outputs)
+
+            # do the checking
+            kosa_results, kosa_counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
+            results, counterexamples = self.model_checker.check()
+            results = kosa_results + results
+            result = sum(results)*1.0/len(results)
+
+            '''
+            BOUNDED MODEL CHECKER
+            '''
+            '''
             results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
             result = sum(results)*1.0/len(results)
+            '''
             print("prev best result: {}".format(best_result))
             print("curr best result: {}".format(result))
             if result >= best_result:
@@ -307,10 +336,19 @@ class MCMCAdapt:
 
             print("correctness property satisfaction: {}".format(result))
             counter = 0
-            for counterexample in counterexamples:
+            for counterexample in kosa_counterexamples:
                 if counterexample is not None:
                     print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
                     traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, counterexample[2], is_prefix=counterexample[1])
+                    # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
+                    #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+                    self.trajs.append(traj)
+                    correctness_trajs.append(traj)
+                counter += 1
+            for counterexample in counterexamples:
+                if counterexample is not None:
+                    print("\nPROPERTY {} VIOLATED -- prefix=False".format(counter))
+                    traj = self.build_trajectory_from_nusmv(counterexample)
                     # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
                     #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
                     self.trajs.append(traj)
@@ -949,4 +987,16 @@ class MCMCAdapt:
         trajectory_to_return = Trajectory(traj_vect, reward, is_prefix, is_correctness=True)
         print(trajectory_to_return)
 
+        return trajectory_to_return
+
+    def build_trajectory_from_nusmv(self, counterexample):
+        traj_vect = []
+        curr_h_in = HumanInput("General")
+        for step in counterexample:
+            curr_r_out = Microinteraction(step["st"],0)
+            traj_vect.append((curr_h_in,curr_r_out))
+            if curr_r_out.type == "END":
+                break
+            curr_h_in = HumanInput(step["hst"])
+        trajectory_to_return = Trajectory(traj_vect, -1, False, is_correctness=True)
         return trajectory_to_return

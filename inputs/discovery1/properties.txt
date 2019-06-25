@@ -1,0 +1,4 @@
+FAIRNESS st=END;
+SPEC AF ~st=\Farewell\~
+SPEC AG (~st=\Farewell\~ -> AX st=END)
+SPEC AG !(st=ERROR)
