@@ -18,7 +18,7 @@ import util
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm, log):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
@@ -28,6 +28,7 @@ class MCMCAdapt:
         self.update_trace_panel = update_trace_panel
         self.path_to_interaction = path_to_interaction
         self.algorithm=algorithm
+        self.log = log
 
         self.mod_limit = int(round(mod_perc*(len(self.inputs.alphabet)*len(self.TS.states))))
         #self.mod_limit = int(round(mod_perc*(14)))
@@ -122,10 +123,17 @@ class MCMCAdapt:
         best_result = -1
         overall_best_design = [TS,[TS.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]]
         break_time = 36000
+
+        # notify log that we're beginning to adapt
+        self.log.write("adaptation beginning")
+
         while result < 1:
         #perf_idx = 0
         #while perf_idx < 1:
             #perf_idx = 1
+
+            # write to the logfile
+            self.log.write(" -- beginning outer loop")
 
             time_start = time.time()
 
@@ -300,6 +308,8 @@ class MCMCAdapt:
                 time_bins[3] += (new_bin_time-bin_time)
 
             print("MCMC steps: {}".format(i))
+            # write to the logfile
+            self.log.write(" -- mcmc steps : {}".format(i))
             print(time_bins)
             #exit()
             SMUtil().build(best_design[0].transitions, best_design[0].states)
@@ -337,6 +347,9 @@ class MCMCAdapt:
                 overall_best_design[1] = [overall_best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in best_design[1]]
 
             print("correctness property satisfaction: {}".format(result))
+            # write to the logfile
+            self.log.write(" -- property satisfaction : {}".format(result))
+
             counter = 0
             for counterexample in kosa_counterexamples:
                 if counterexample is not None:
@@ -375,6 +388,8 @@ class MCMCAdapt:
         print("completed at itr {}".format(i))
 
         end_time = time.time()
+        # write to the logfile
+        self.log.write(" -- ending adaptation, time taken : {}".format(end_time - start_time))
 
         print("took {} seconds".format(end_time - start_time))
         print("{} accepts, {} rejects".format(accept_counter, reject_counter))

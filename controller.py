@@ -9,6 +9,7 @@ from json_exporter import *
 from verification.prism_util import *
 from reader import *
 from trajectory_builder import *
+from log import *
 import util
 import pickle
 
@@ -19,7 +20,8 @@ class Controller:
         json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
 
-        
+        # initialize the log
+        self.log = AdaptLog()
 
         # read the interaction
         self.json_exp = JSONExporter()
@@ -111,8 +113,10 @@ class Controller:
 
         print("STARTING INTERACTION")
         print(self.TS)
-        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm)
+        self.log.open()
+        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log)
         self.TS, st_reachables, correctness_trajs = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
+        self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
         with open("trajectories_used_for_learning.pkl", "wb") as fp:
