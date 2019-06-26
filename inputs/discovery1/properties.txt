@@ -1,4 +1,36 @@
+--------------
+-- the basics
+--------------
+
+-- all paths considered must reach the end
 FAIRNESS st=END;
+
+-- the interaction must reach farewell
 SPEC AF ~st=\Farewell\~
+
+-- after farewell, END must come
 SPEC AG (~st=\Farewell\~ -> AX st=END)
+
+-- an error state should never be reachable
 SPEC AG !(st=ERROR)
+
+---------------------
+-- as required by the desk
+---------------------
+
+-- after asking about visitation, the next state must ALWAYS refer the human to the desk
+SPEC AG (~st=\Visitation\~ -> AX ~st=\ReferToDesk\~)
+
+-- after asking about deliveries, the next state must either be delivery information, or referral to the desk
+SPEC AG (~st=\Delivery\~ -> (AX ~st=\DeliveryInfo\~ | AX ~st=\ReferToDesk\~))
+
+-- don't say goodbye if the human said something other than Goodbye or Ignore
+SPEC AG ((~hst!=\Goodbye\~ & ~hst!=\Ignore\~) -> !(AX ~st=\Goodbye\~))
+
+---------------------
+-- the restricting
+---------------------
+
+-- after saying goodbye, the robot must respond with goodbye in the next state
+
+--

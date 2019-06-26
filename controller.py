@@ -19,6 +19,8 @@ class Controller:
         json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
 
+        
+
         # read the interaction
         self.json_exp = JSONExporter()
         self.TS, self.micro_selection = Reader("inputs/{}/interaction.xml".format(path_to_interaction),json_data).build()
@@ -40,23 +42,25 @@ class Controller:
         #self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
-        # with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
-        #    self.trajs = pickle.load(fp)
+        with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
+            self.trajs = pickle.load(fp)
         # NOTE: COMMENT OUT IF NOT DEBUGGING
         #tb = TrajectoryBuilder()
         #self.trajs = tb.session()
 
         # artificially make trajectories
 
-        self.trajs = []
+        #self.trajs = []
         '''
         tracegen_module = importlib.import_module("inputs.{}.trace_generator".format(path_to_interaction))
         TraceGenerator = tracegen_module.TraceGenerator
         tracegen = TraceGenerator(self.TS, self.inputs.alphabet, self.outputs.alphabet)
         self.trajs = self.trajs + tracegen.get_trajectories(100)
         '''
+
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "wb") as fp:
         #    pickle.dump(self.trajs,fp)
+        #exit()
         self.consolidate_trajectories()
 
         '''

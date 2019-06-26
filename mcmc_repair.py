@@ -40,7 +40,8 @@ class MCMCAdapt:
         prop_strings = []
         with open("inputs/{}/properties.txt".format(path_to_interaction), "r") as propfile:
             for line in propfile:
-                prop_strings.append(line)
+                if line != "\n" and line[0:2] != "--":
+                    prop_strings.append(line)
 
         self.model_checker = ModelChecker(prop_strings)
 
@@ -60,6 +61,7 @@ class MCMCAdapt:
 
         # create the lists to keep track of added states and removed transitions
         added_states = []
+        modified_states = []
         removed_transitions = []
         for state in all_states:
             for inp in self.inputs.alphabet:
@@ -76,7 +78,7 @@ class MCMCAdapt:
         # set up the modification tracker dataset
         mod_tracker.reset_tracker(TS,self.inputs)
 
-        return TS, all_trans, all_states, added_states, removed_transitions
+        return TS, all_trans, all_states, added_states, modified_states, removed_transitions
 
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
         start_time = time.time()
@@ -94,7 +96,7 @@ class MCMCAdapt:
         mod_tracker = ModificationTracker()
 
         # copy the TS
-        TS, all_trans, all_states, added_states, removed_transitions = self.reset_TS(mod_tracker)
+        TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
 
         # setup LTL property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
@@ -201,7 +203,7 @@ class MCMCAdapt:
                     break
 
                 bin_time = time.time()
-                undoable = self.modify_TS(TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
+                undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                 new_bin_time = time.time()
                 time_bins[1] += (new_bin_time-bin_time)
 
@@ -272,7 +274,7 @@ class MCMCAdapt:
                 # accept or reject
                 if u > alpha and self.algorithm=="mcmc":
                     reject_counter += 1
-                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker)
+                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                 else:
                     #print(TS)
                     accept_counter += 1
@@ -358,7 +360,8 @@ class MCMCAdapt:
             print("rew vect pre correctness: {}".format(reward_vect))
 
             # reset the TS
-            TS, all_trans, all_states, added_states, removed_transitions = self.reset_TS(mod_tracker)
+            # first print out the final distance
+            TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
 
             #for traj in self.trajs:
             #    print(traj.comparable_string())
@@ -399,7 +402,7 @@ class MCMCAdapt:
 
         return best_design[0], st_reachable, correctness_trajs
 
-    def modify_TS(self, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
+    def modify_TS(self, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
         num_states = len(list(TS.states))
         num_trans = len(all_trans)
         num_added_states = len(added_states)
@@ -419,17 +422,37 @@ class MCMCAdapt:
         '''
         needs to be "else choose the number of modified states"
         '''
-        num_state_mods = 1 if num_mods < self.mod_limit else 0 #len(all_states) if num_mods < self.mod_limit else 0
+        allowable_modifications = []
+        for state in TS.states.values():
+            if state not in modified_states:
+                if len(state.in_trans) <= self.mod_limit-num_mods:
+                    allowable_modifications.append(state)
+        num_state_mods = 1 if (len(allowable_modifications)>0 or len(modified_states)>0) else 0 #len(all_states) if num_mods < self.mod_limit else 0
         '''
         done with potential modifications
         NOTE: what do we do when there are limited modifications that can be made??
         USE MOD LIMITED
         '''
-        num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
-        num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
-        num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
-        num_state_additions = num_trans if num_mods < self.mod_limit else 0
-        num_state_deletions = num_added_states
+        #num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
+        num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_empties,num_trans)>0 and self.mod_limit<=num_mods) else 0
+        #num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
+        num_transition_deletions = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_empties,num_trans)>0 and self.mod_limit<=num_mods) else 0
+        #num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
+        num_transition_additions = 1 if ((len(removed_transitions)>0 and self.mod_limit>num_mods) or (num_empties>0 and self.mod_limit<=num_mods)) else 0
+
+        # num_state_additions = 1 if there's an added state whose input transitions we can modify OR if there exists a group of modifiable transitions whose size is less than the number of modifiable transitions
+        allowable_new_state_trans_mods = []
+        for state in TS.states.values():
+            if state in modified_states:
+                for trans in state.in_trans:
+                    allowable_new_state_trans_mods.append(trans)
+            else:
+                if len(state.in_trans) <= self.mod_limit-num_mods:
+                    for trans in state.in_trans:
+                        allowable_new_state_trans_mods.append(trans)
+        num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 else 0
+
+        num_state_deletions = 1 if num_added_states>0 else 0
 
         '''
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\nNEW MODIFICATION{}".format("   ~~~ mod limited" if mod_limited else ""))
@@ -466,12 +489,9 @@ class MCMCAdapt:
         if selection == 1:    # modify existing state
             #print("~CHOICE~: state modification")
 
-            # handle limits to the number of modifications that can be performed
-            allowable_mods = self.mod_limit - num_mods
-            allowed_states = []
-
             # randomly pick a state to modify
-            state = random.choice(all_states)
+            total_modifiable_states = allowable_modifications + modified_states
+            state = random.choice(total_modifiable_states)
             curr_state_name = state.name
             old_micro = state.micros[0]
 
@@ -492,6 +512,11 @@ class MCMCAdapt:
             for trans in state.in_trans:
                 if trans.target is not None:
                     mod_tracker.update_mod_tracker(trans)
+
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: modifying an existing state (1) resulted in more mods than allowed")
+                #exit()
 
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
@@ -524,6 +549,11 @@ class MCMCAdapt:
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition)
 
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: modifying an existing transition (2) resulted in more mods than allowed")
+                #exit()
+
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
             #print("~CHOICE~: transition deletion")
@@ -550,6 +580,11 @@ class MCMCAdapt:
 
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition, deleted=True)
+
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: deleting an existing transition (3) resulted in more mods than allowed")
+                #exit()
 
             undoable = (3, (transition, source, target))
         elif selection == 4:  # add transition
@@ -578,14 +613,20 @@ class MCMCAdapt:
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition)
 
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: adding a transition (4) resulted in more mods than allowed")
+                #exit()
+
             undoable = (4, (transition, source, target))
         elif selection == 5:  # insert state
             #print("~CHOICE~: state insertion")
             '''
             # DECIDE ON WHERE TO INSERT THE STATE
             '''
+
             # randomly select a transition
-            trans = random.choice(all_trans)
+            trans = random.choice(allowable_new_state_trans_mods)
             source_state = trans.source
             target_state = trans.target
             trans_to_modify = [trans]
@@ -669,6 +710,11 @@ class MCMCAdapt:
             for trans in trans_to_modify:
                 TS.transitions[str(source_state.id)][str(state.id)].append(trans)
 
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: adding a state (5) resulted in more mods than allowed")
+                #exit()
+
             undoable = (5, (state, transitions, trans_to_modify, source_state, target_state))
         elif selection == 6:  # delete existing state
             #print("~CHOICE~: state deletion")
@@ -734,14 +780,21 @@ class MCMCAdapt:
 
             # update the mod tracker
             for transition in modified_linked:
+                #print("modified_linked transition: {}".format(str(transition)))
                 mod_tracker.update_mod_tracker(transition)
             for transition in unlinked_to_delete:
+                #print("unlinked_to_delete transition: {}".format(str(transition)))
                 mod_tracker.update_mod_tracker(transition, deleted=True)
+
+            # check if num mods went over the limit
+            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+                print("ERROR: removing a state (6) resulted in more mods than allowed")
+                #exit()
 
         #print(TS)
         return undoable
 
-    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, removed_transitions, mod_tracker):
+    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
 
         selection = undoable[0]
 
@@ -999,4 +1052,5 @@ class MCMCAdapt:
                 break
             curr_h_in = HumanInput(step["hst"])
         trajectory_to_return = Trajectory(traj_vect, -1, False, is_correctness=True)
+        print(trajectory_to_return)
         return trajectory_to_return
