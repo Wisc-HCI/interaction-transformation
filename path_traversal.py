@@ -81,7 +81,10 @@ class PathTraversal:
             if sat:
                 #print("sat")
                 trajectory_status[traj] = traj.reward
-                sats.append(traj.reward)
+                if traj.is_correctness:
+                    eqs.append(traj.reward)
+                else:
+                    sats.append(traj.reward)
 
         #exit(0)
         #return sats, probs, trajectory_status

@@ -88,7 +88,7 @@ class MCMCAdapt:
         #allowable_time = 319.91643850803376
         #allowable_time = 98.7957421541214
         #allowable_time = 0.18487918376922607
-        allowable_time = 1
+        allowable_time = 10
 
         # for speeding up the program
         time_bins = [0,0,0,0]
@@ -99,7 +99,7 @@ class MCMCAdapt:
         # calculate the absolute max and the absolute min for this set of trajectories
         R_neg = 0.0
         R_pos = 0.0
-        l = len(self.trajs)
+        num_non_correctness_trajs = len(self.trajs)
         for traj in self.trajs:
             i = traj.reward
             if i < 0:
@@ -107,8 +107,8 @@ class MCMCAdapt:
             elif i > 0:
                 R_pos += abs(i)
 
-        abs_min = l-R_pos
-        abs_max = l+R_neg
+        abs_min = (num_non_correctness_trajs-R_pos)*1.0/(2*num_non_correctness_trajs)
+        abs_max = (num_non_correctness_trajs+R_neg)*1.0/(2*num_non_correctness_trajs)
 
         # copy the TS
         TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
@@ -180,7 +180,7 @@ class MCMCAdapt:
             print("rew vect post correctness: {}".format(reward_vect))
             total_reward = sum(reward_vect)
             #precost = self.get_cost(reward_vect, distance)
-            perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max)
+            perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max, num_non_correctness_trajs)
             eq_cost = self.get_eq_cost(unweighted_eq_vect)
             precost = perf_cost + eq_cost
 
@@ -290,8 +290,9 @@ class MCMCAdapt:
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
                 total_reward = sum(new_reward_vect)
+                #print(total_reward)
                 #postcost = self.get_cost(new_reward_vect,distance)
-                perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max)
+                perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, num_non_correctness_trajs)
                 eq_cost = self.get_eq_cost(unweighted_eq_vect)
                 postcost = perf_cost + eq_cost
                 new_bin_time = time.time()
@@ -303,9 +304,11 @@ class MCMCAdapt:
 
                 # accept or reject
                 if u > alpha and self.algorithm=="mcmc":
+                    #print("reject")
                     reject_counter += 1
                     self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                 else:
+                    #print("accept")
                     #print(TS)
                     accept_counter += 1
                     precost = postcost
@@ -1058,10 +1061,10 @@ class MCMCAdapt:
 
         return (R_neg + 1/(R_pos))
 
-    def get_perf_cost(self, reward_vect, abs_min, abs_max):
+    def get_perf_cost(self, reward_vect, abs_min, abs_max, num_noncorrectness):
         R_neg = 0.0
         R_pos = 0.0
-        l = len(reward_vect)
+        l = num_noncorrectness
         for i in reward_vect:
             if i < 0:
                 R_neg += abs(i)
@@ -1073,6 +1076,16 @@ class MCMCAdapt:
         raw_perf_cost = numerator*1.0/(2*l) if l>0 else 0
 
         perf_cost = ((raw_perf_cost)-abs_min)*1.0/(abs_max-abs_min)
+
+        #print("~~~~~~")
+        #print(l)
+        #print(abs_max)
+        #print(abs_min)
+        #print(raw_perf_cost)
+        #print(perf_cost)
+        if perf_cost>1.0 or perf_cost<0.0:
+            exit()
+        #exit()
 
         return perf_cost
 
