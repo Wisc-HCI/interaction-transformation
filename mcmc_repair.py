@@ -96,6 +96,20 @@ class MCMCAdapt:
         # set up the modification tracker dataset
         mod_tracker = ModificationTracker()
 
+        # calculate the absolute max and the absolute min for this set of trajectories
+        R_neg = 0.0
+        R_pos = 0.0
+        l = len(self.trajs)
+        for traj in self.trajs:
+            i = traj.reward
+            if i < 0:
+                R_neg += abs(i)
+            elif i > 0:
+                R_pos += abs(i)
+
+        abs_min = l-R_pos
+        abs_max = l+R_neg
+
         # copy the TS
         TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
 
@@ -156,15 +170,19 @@ class MCMCAdapt:
             sat_ratio = 1
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
             unweighted_rew_vect = []
+            unweighted_eq_vect = []
             traj_status = {}
-            path_traversal.check(unweighted_rew_vect, traj_status)
+            path_traversal.check(unweighted_rew_vect, unweighted_eq_vect, traj_status)
             print(unweighted_rew_vect)
             print(traj_status)
             #reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
             reward_vect = unweighted_rew_vect
             print("rew vect post correctness: {}".format(reward_vect))
             total_reward = sum(reward_vect)
-            precost = self.get_cost(reward_vect, distance)
+            #precost = self.get_cost(reward_vect, distance)
+            perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max)
+            eq_cost = self.get_eq_cost(unweighted_eq_vect)
+            precost = perf_cost + eq_cost
 
             accept_counter = 0
             reject_counter = 0
@@ -226,8 +244,9 @@ class MCMCAdapt:
                 '''
                 path_traversal = PathTraversal(TS, self.trajs, self.freqs, removed_transitions)
                 unweighted_rew_vect = []
+                unweighted_eq_vect = []
                 traj_status = {}
-                path_traversal.check(unweighted_rew_vect, traj_status)
+                path_traversal.check(unweighted_rew_vect, unweighted_eq_vect, traj_status)
                 '''
                 path_traversal_1 = PathTraversal(TS, trajs_split[0], self.freqs, removed_transitions)
                 path_traversal_2 = PathTraversal(TS, trajs_split[1], self.freqs, removed_transitions)
@@ -271,7 +290,10 @@ class MCMCAdapt:
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
                 total_reward = sum(new_reward_vect)
-                postcost = self.get_cost(new_reward_vect,distance)
+                #postcost = self.get_cost(new_reward_vect,distance)
+                perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max)
+                eq_cost = self.get_eq_cost(unweighted_eq_vect)
+                postcost = perf_cost + eq_cost
                 new_bin_time = time.time()
                 time_bins[2] += (new_bin_time-bin_time)
 
@@ -405,7 +427,7 @@ class MCMCAdapt:
                 print("state {} is unreachable".format(state.name))
         path_traversal = PathTraversal(best_design[0], self.trajs, self.freqs, best_design[1])
         traj_status = {}
-        path_traversal.check([], traj_status)
+        path_traversal.check([],[], traj_status)
         self.update_trace_panel(traj_status)
 
         # output a pickle file with more traj status
@@ -1035,6 +1057,31 @@ class MCMCAdapt:
                 R_pos += abs(i)
 
         return (R_neg + 1/(R_pos))
+
+    def get_perf_cost(self, reward_vect, abs_min, abs_max):
+        R_neg = 0.0
+        R_pos = 0.0
+        l = len(reward_vect)
+        for i in reward_vect:
+            if i < 0:
+                R_neg += abs(i)
+            elif i > 0:
+                R_pos += abs(i)
+
+        numerator = (l-R_pos)
+        numerator += R_neg
+        raw_perf_cost = numerator*1.0/(2*l) if l>0 else 0
+
+        perf_cost = ((raw_perf_cost)-abs_min)*1.0/(abs_max-abs_min)
+
+        return perf_cost
+
+    def get_eq_cost(self, reward_vect):
+        sum_cost = 0.0
+        for i in reward_vect:
+            sum_cost += i
+
+        return sum_cost*1.0/len(reward_vect) if len(reward_vect)>0 else 0
 
     def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
         traj_vect = []

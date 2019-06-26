@@ -6,7 +6,7 @@ class PathTraversal:
         self.freqs = freqs
         self.removed_transitions = removed_transitions
 
-    def check(self, sats, trajectory_status):
+    def check(self, sats, eqs, trajectory_status):
 
         # create a temporary dictionary of dict[source_state][condition] = target_state
         cond_dict = {}
