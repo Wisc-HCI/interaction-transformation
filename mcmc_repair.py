@@ -198,8 +198,12 @@ class MCMCAdapt:
 
             miter = 0
 
+            models_checked = 0
+            models_unchecked = 0
+
             # we want to cap the time at 12 hours
-            while True:
+            start_time = time.time()
+            while i < 50000:
 
                 # get the current time
                 curr_time = time.time()
@@ -217,18 +221,6 @@ class MCMCAdapt:
                 plot_data["time"].append(curr_time)
                 new_bin_time = time.time()
                 time_bins[0] += (new_bin_time-bin_time)
-
-                #time_elapsed = curr_time - start_time
-                #if miter > allowable_time or sum(reward_vect) == max_possible_reward:
-                if curr_time - time_start > allowable_time:
-                    with open("plot_data.pkl", "wb") as fp:
-                        pickle.dump(plot_data["progress"], fp)
-                    total_reward_plotter.update_graph(plot_data["rewards"])
-                    progress_plotter.update_graph(plot_data["progress"])
-                    cost_plotter.update_graph(plot_data["cost"])
-                    prop_plotter.update_graph(plot_data["props"])
-                    distance_plotter.update_graph(plot_data["distances"])
-                    break
 
                 bin_time = time.time()
                 undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
@@ -296,6 +288,15 @@ class MCMCAdapt:
                 #postcost = self.get_cost(new_reward_vect,distance)
                 perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, num_non_correctness_trajs)
                 eq_cost = self.get_eq_cost(unweighted_eq_vect)
+
+                # if eq cost is 0, run the model checker
+                if eq_cost == 0:
+                    new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs)
+                    eq_cost = self.get_eq_cost(new_eq_vect)
+                    models_checked += 1
+                else:
+                    models_unchecked += 1
+
                 postcost = perf_cost + eq_cost
                 new_bin_time = time.time()
                 time_bins[2] += (new_bin_time-bin_time)
@@ -318,91 +319,43 @@ class MCMCAdapt:
                     distance = new_distance
 
                     # check if we have encountered the best design
-                    if total_reward > best_design[2]:    # ensuring that benign changes don't get made
+                    if eq_cost == 0 and total_reward > best_design[2]:    # ensuring that benign changes don't get made
                         #print("BEST DESIGN!")
                         best_design[0] = TS.copy()
                         #best_design[1] = [trans for trans in removed_transitions]
-                        print("duplicating transition 3")
+                        print("found new interaction")
                         best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
                         best_design[2] = total_reward
                         best_design[3] = traj_status
 
-                if i%5000 == 0:
-                    print("itr {}".format(i))
+                if curr_time - start_time > 5:
+                    print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    models_checked = 0
+                    models_unchecked = 0
+                    start_time = time.time()
                 i+=1
 
                 miter += 1
                 new_bin_time = time.time()
                 time_bins[3] += (new_bin_time-bin_time)
 
+            # plot everything
+            with open("plot_data.pkl", "wb") as fp:
+                pickle.dump(plot_data["progress"], fp)
+            total_reward_plotter.update_graph(plot_data["rewards"])
+            progress_plotter.update_graph(plot_data["progress"])
+            cost_plotter.update_graph(plot_data["cost"])
+            prop_plotter.update_graph(plot_data["props"])
+            distance_plotter.update_graph(plot_data["distances"])
+
             print("MCMC steps: {}".format(i))
             # write to the logfile
             self.log.write(" -- mcmc steps : {}".format(i))
-            print(time_bins)
-            #exit()
-            SMUtil().build(best_design[0].transitions, best_design[0].states)
-            print("the best design from this iteration is shown below")
-            print(str(best_design[0]))
-
-            '''
-            PyNuSMV MODEL CHECKER
-            '''
-            # export the transition system to .smv file
-            self.model_checker.create_and_load_model(best_design[0], best_design[1], self.inputs, self.outputs)
-
-            # do the checking
-            kosa_results, kosa_counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
-            results, counterexamples = self.model_checker.check()
-            results = kosa_results + results
-            result = sum(results)*1.0/len(results)
-
-            '''
-            BOUNDED MODEL CHECKER
-            '''
-            '''
-            results, counterexamples = property_checker.compute_constraints(best_design[0], self.setup_helper, best_design[1])
-            result = sum(results)*1.0/len(results)
-            '''
-            print("prev best result: {}".format(best_result))
-            print("curr best result: {}".format(result))
-            if result >= best_result:
-                best_result = result
-                overall_best_design[0] = best_design[0].copy()
-                #best_design[1] = [trans for trans in removed_transitions]
-                print(best_design[1])
-                for trans in best_design[1]:
-                    print(str(trans))
-                overall_best_design[1] = [overall_best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in best_design[1]]
-
-            print("correctness property satisfaction: {}".format(result))
-            # write to the logfile
-            self.log.write(" -- property satisfaction : {}".format(result))
-
-            counter = 0
-            for counterexample in kosa_counterexamples:
-                if counterexample is not None:
-                    print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
-                    traj = self.build_trajectory(counterexample[0], best_design[0].states, -1, counterexample[2], is_prefix=counterexample[1])
-                    # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
-                    #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
-                    self.trajs.append(traj)
-                    correctness_trajs.append(traj)
-                counter += 1
-            for counterexample in counterexamples:
-                if counterexample is not None:
-                    print("\nPROPERTY {} VIOLATED -- prefix=False".format(counter))
-                    traj = self.build_trajectory_from_nusmv(counterexample)
-                    # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
-                    #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
-                    self.trajs.append(traj)
-                    correctness_trajs.append(traj)
-                counter += 1
-
-            print("rew vect pre correctness: {}".format(reward_vect))
 
             # reset the TS
             # first print out the final distance
             TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
+            break
 
             #for traj in self.trajs:
             #    print(traj.comparable_string())
@@ -444,6 +397,57 @@ class MCMCAdapt:
             pickle.dump(traj_status_pickle, fp)
 
         return best_design[0], st_reachable, correctness_trajs
+
+    def model_check(self, TS, removed_transitions, property_checker, correctness_trajs):
+        new_eq_vect = []
+        '''
+        PyNuSMV and KOSA MODEL CHECKERS
+        '''
+        # export the transition system to .smv file
+        self.model_checker.create_and_load_model(TS, removed_transitions, self.inputs, self.outputs)
+
+        # do the checking
+        kosa_results, kosa_counterexamples = property_checker.compute_constraints(TS, self.setup_helper, removed_transitions)
+        results, counterexamples = self.model_checker.check()
+        results = kosa_results + results
+        result = sum(results)*1.0/len(results)
+
+        #print("correctness property satisfaction: {}".format(result))
+        # write to the logfile
+        self.log.write(" -- property satisfaction : {}".format(result))
+
+        counter = 0
+        for counterexample in kosa_counterexamples:
+            if counterexample is not None:
+                #print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
+                traj = self.build_trajectory(counterexample[0], TS.states, -1, counterexample[2], is_prefix=counterexample[1])
+                # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
+                #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+                self.trajs.append(traj)
+                correctness_trajs.append(traj)
+                new_eq_vect.append(-1)
+            counter += 1
+        for counterexample in counterexamples:
+            if counterexample is not None:
+                #print("\nPROPERTY {} VIOLATED -- prefix=False".format(counter))
+                traj = self.build_trajectory_from_nusmv(counterexample, TS)
+                # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
+                #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+
+                # check for duplicate trajectories
+                for other_traj in self.trajs:
+                    if str(traj) == str(other_traj):
+                        print("ERROR: duplicate trajectories")
+                        print(traj)
+                        print(other_traj)
+                        exit()
+
+                self.trajs.append(traj)
+                correctness_trajs.append(traj)
+                new_eq_vect.append(-1)
+            counter += 1
+
+        return new_eq_vect
 
     def modify_TS(self, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
         num_states = len(list(TS.states))
@@ -1093,16 +1097,24 @@ class MCMCAdapt:
         return perf_cost
 
     def get_eq_cost(self, reward_vect):
+        # count the number of correctness trajectories
+        num_correctness = 0
+        for i in self.trajs:
+            if i.is_correctness:
+                num_correctness+=1
         sum_cost = 0.0
         for i in reward_vect:
-            sum_cost += i
+            sum_cost += abs(i)
 
-        return sum_cost*1.0/len(reward_vect) if len(reward_vect)>0 else 0
+        eq_cost = sum_cost*1.0/num_correctness if num_correctness>0 else 0
+        if eq_cost < 0:
+            print("ERROR: eq cost cannot be less than 0")
+        return eq_cost
 
     def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
         traj_vect = []
-        print(rawinput)
-        print(output_mapping)
+        #print(rawinput)
+        #print(output_mapping)
         for item in rawinput:
             micro = None
             for st_name, st in states.items():
@@ -1116,19 +1128,25 @@ class MCMCAdapt:
                 exit(1)
 
         trajectory_to_return = Trajectory(traj_vect, reward, is_prefix, is_correctness=True)
-        print(trajectory_to_return)
+        #print(trajectory_to_return)
 
         return trajectory_to_return
 
-    def build_trajectory_from_nusmv(self, counterexample):
+    def build_trajectory_from_nusmv(self, counterexample, TS):
+        end_flag = False
         traj_vect = []
         curr_h_in = HumanInput("General")
         for step in counterexample:
-            curr_r_out = Microinteraction(step["st"],0)
+            curr_r_out = Microinteraction(TS.states[step["st"]].micros[0]["name"] if step["st"] != "END" else "END",0)
             traj_vect.append((curr_h_in,curr_r_out))
             if curr_r_out.type == "END":
+                end_flag = True
                 break
             curr_h_in = HumanInput(step["hst"])
-        trajectory_to_return = Trajectory(traj_vect, -1, False, is_correctness=True)
-        print(trajectory_to_return)
+        if end_flag:
+            is_prefix = False
+        else:
+            is_prefix=True
+        trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=is_prefix, is_correctness=True)
+        #print(trajectory_to_return)
         return trajectory_to_return
