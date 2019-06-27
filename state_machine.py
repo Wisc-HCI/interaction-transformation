@@ -83,6 +83,14 @@ class TS(object):
                 target = state
                 target_id = state.id
 
+        if source is None or target is None:
+            if target is None:
+                target_id = self.init.id
+                target = self.init
+            else:
+                print("ERROR: source cannot be none")
+
+
         trans_to_return = Transition(source_id, target_id, condition)
         trans_to_return.source = source
         trans_to_return.target = target

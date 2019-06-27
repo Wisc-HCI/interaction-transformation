@@ -88,7 +88,7 @@ class MCMCAdapt:
         #allowable_time = 319.91643850803376
         #allowable_time = 98.7957421541214
         #allowable_time = 0.18487918376922607
-        allowable_time = 10
+        allowable_time = 1
 
         # for speeding up the program
         time_bins = [0,0,0,0]
@@ -135,6 +135,7 @@ class MCMCAdapt:
         # we cap the time at 12 hours
         lowbound_time = time.time()
         best_result = -1
+        print("duplicating transition")
         overall_best_design = [TS,[TS.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]]
         break_time = 36000
 
@@ -187,6 +188,7 @@ class MCMCAdapt:
             accept_counter = 0
             reject_counter = 0
             TS_copy = TS.copy()
+            print("duplicating transition 2")
             best_design = [TS_copy,[TS_copy.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions],sum(reward_vect), traj_status]
 
             # determine the maximum possible reward
@@ -299,7 +301,7 @@ class MCMCAdapt:
                 time_bins[2] += (new_bin_time-bin_time)
 
                 bin_time = time.time()
-                alpha = min(1, math.exp(-0.1 * (postcost*1.0/precost)))
+                alpha = min(1, math.exp(-0.1 * (postcost*1.0/(precost if precost>0 else 0.01))))
                 u = np.random.random()
 
                 # accept or reject
@@ -320,6 +322,7 @@ class MCMCAdapt:
                         #print("BEST DESIGN!")
                         best_design[0] = TS.copy()
                         #best_design[1] = [trans for trans in removed_transitions]
+                        print("duplicating transition 3")
                         best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
                         best_design[2] = total_reward
                         best_design[3] = traj_status
