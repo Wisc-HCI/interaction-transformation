@@ -7,9 +7,7 @@
 		<name>Greeting</name>
 		<micro>
 			<name>Greeter</name>
-			<parameter type="bool" val="true">Greet_with_speech</parameter>
-			<parameter type="bool" val="false">Greet_with_handshake</parameter>
-			<parameter type="bool" val="true">Wait_for_response</parameter>
+			<instantiation>Greeting</instantiation>
 		</micro>
 
 	</group>
@@ -18,6 +16,7 @@
 		<name>Farewell</name>
 		<micro>
 			<name>Farewell</name>
+			<instantiation>Farewell</instantiation>
 		</micro>
 
 	</group>
@@ -26,9 +25,7 @@
 		<name>ReferToDesk</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="To visit someone in the discovery building, please speak to an actual human being behind the desk.">content</parameter>
-			<parameter type="bool" val="true">use_gesture</parameter>
-			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+			<instantiation>ReferToDesk</instantiation>
 		</micro>
 
 	</group>
@@ -37,9 +34,7 @@
 		<name>HandleDelivery</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="To find out about deliveries, please speak to an actual human being behind the desk.">content</parameter>
-			<parameter type="bool" val="true">use_gesture</parameter>
-			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+			<instantiation>DeliveryInfo</instantiation>
 		</micro>
 
 	</group>
@@ -48,9 +43,7 @@
 		<name>PromptToAsk</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="Why don't you try asking me about things like the history of the building, or parking!">content</parameter>
-			<parameter type="bool" val="true">use_gesture</parameter>
-			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+			<instantiation>PromptToAsk</instantiation>
 		</micro>
 
 	</group>
@@ -59,9 +52,7 @@
 		<name>AnswerQuestion</name>
 		<micro>
 			<name>Remark</name>
-			<parameter type="str" val="Placeholder for question answering.">content</parameter>
-			<parameter type="bool" val="true">use_gesture</parameter>
-			<parameter type="bool" val="true">Allow_human_to_respond</parameter>
+			<instantiation>AnswerQuestion</instantiation>
 		</micro>
 	</group>
 
