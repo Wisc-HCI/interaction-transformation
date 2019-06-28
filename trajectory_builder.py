@@ -5,6 +5,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialog, QLabel, QPushButton, QScrollArea, QGroupBox, QGridLayout, QSpinBox
 
+import copy
+
 class TrajectoryBuilder(QDialog):
 
     def __init__(self, ins, outs):
@@ -66,9 +68,9 @@ class TrajectoryBuilder(QDialog):
                                      .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(150, 150, 150);}""")
         self.cancel.clicked.connect(self.on_cancel)
 
-        self.inputs = ins.alphabet
+        self.inputs = copy.copy(ins.alphabet)
         self.inputs["leave"] = -1
-        self.outputs = outs.alphabet
+        self.outputs = copy.copy(outs.alphabet)
         self.outputs["END"] = -1
 
         # populate the io pane with the human inputs

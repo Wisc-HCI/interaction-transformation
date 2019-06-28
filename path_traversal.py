@@ -6,7 +6,7 @@ class PathTraversal:
         self.freqs = freqs
         self.removed_transitions = removed_transitions
 
-    def check(self, sats, trajectory_status):
+    def check(self, sats, eqs, trajectory_status):
 
         # create a temporary dictionary of dict[source_state][condition] = target_state
         cond_dict = {}
@@ -81,7 +81,10 @@ class PathTraversal:
             if sat:
                 #print("sat")
                 trajectory_status[traj] = traj.reward
-                sats.append(traj.reward)
+                if traj.is_correctness:
+                    eqs.append(traj.reward)
+                else:
+                    sats.append(traj.reward)
 
         #exit(0)
         #return sats, probs, trajectory_status

@@ -21,7 +21,7 @@ class SMTSetup:
                     setup_constraints = And(setup_constraints, f_T(outputs[trans.source.name], inputs[trans.condition]) == outputs[trans.target.name])
 
         for trans in removed_transitions:
-            print(str(trans))
+            #print(str(trans))
             setup_constraints = And(setup_constraints, f_T(outputs[trans.source.name], inputs[trans.condition])==-1)
 
         for inp in inputs:
