@@ -3,7 +3,7 @@
                                                             "Greet_with_handshake":"false",
                                                             "Wait_for_response":"true"}
                        },
-             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"Placeholder for question answering.",
+             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"With support from campus and the community, the Morgridges and WARF, construction on the Discovery Building began in 2008, and it opened to the public in 2010.",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
