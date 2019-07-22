@@ -3,7 +3,7 @@
                                                             "Greet_with_handshake":"false",
                                                             "Wait_for_response":"true"}
                        },
-             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"Placeholder for question answering.",
+             "AnswerQuestion": {"id":1,"micro":"Remark","content":"false","params":{"content":"$ANSWER_QUESTION",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
@@ -38,6 +38,13 @@
              "Farewell": {"id":9,"micro":"Farewell","content":"false","params":{}
                         }
             },
- "topic_keywords": {},
+ "interaction_variables": {"$ANSWER_QUESTION":{"input":"About"}},
+ "topic_keywords": {"Visitation": ["Visitation"],
+                    "Delivery": ["Delivery"],
+                    "About": ["About"],
+                    "Directions": ["Directions"],
+                    "Goodbye": ["Goodbye"],
+                    "General": ["General"],
+                    "Ignore": ["Ignore"]},
  "mod_percent": 0.1,
  "time_mcmc": 500000}
