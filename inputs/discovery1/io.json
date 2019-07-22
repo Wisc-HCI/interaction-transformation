@@ -41,10 +41,10 @@
  "interaction_variables": {"$ANSWER_QUESTION":{"input":"About"}},
  "topic_keywords": {"Visitation": ["Visitation"],
                     "Delivery": ["Delivery"],
-                    "About": ["About"],
+                    "About": ["About_History", "About_Parking"],
                     "Directions": ["Directions"],
                     "Goodbye": ["Goodbye"],
-                    "General": ["General"],
+                    "General": ["General", "Hello"],
                     "Ignore": ["Ignore"]},
  "mod_percent": 0.1,
  "time_mcmc": 500000}
