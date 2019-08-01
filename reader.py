@@ -122,6 +122,19 @@ class TrajectoryReader:
             print("TRAJS:")
             print(raw_trajs)
             for raw_traj in raw_trajs:
+
+                _ = raw_traj.pop(-1) # age
+                _ = raw_traj.pop(-1) # gender
+
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+                _ = raw_traj.pop(-1) # survey
+
                 _ = raw_traj.pop(-1) # end time
                 _ = raw_traj.pop(-1) # start time
                 _ = raw_traj.pop(-1) # date
@@ -132,6 +145,9 @@ class TrajectoryReader:
                 is_correctness = raw_traj.pop(-1)
                 is_prefix = raw_traj.pop(-1)
                 score = raw_traj.pop(-1)
+
+                _ = raw_traj.pop(-1) # whether or not interacted before
+
                 print(raw_traj)
 
                 traj_vect = [(HumanInput("General"),Microinteraction(raw_traj[0][0]))]

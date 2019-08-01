@@ -25,7 +25,7 @@ SPEC AG (~st=\Visitation\~ -> AX ~st=\ReferToDesk\~)
 SPEC AG (~st=\Delivery\~ -> (AX ~st=\DeliveryInfo\~ | AX ~st=\ReferToDesk\~))
 
 -- don't say goodbye if the human said something other than Goodbye or Ignore
-SPEC AG ((~hst!=\Goodbye\~ & ~hst!=\Ignore\~) -> !(AX ~st=\Goodbye\~))
+-- SPEC AG ((~hst!=\Goodbye\~ & ~hst!=\Ignore\~) -> !(AX ~st=\Farewell\~))
 
 ---------------------
 -- the restricting
