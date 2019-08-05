@@ -44,8 +44,9 @@ class Controller:
         #self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
-        with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
-            self.trajs = pickle.load(fp)
+        self.trajs = []
+        #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
+        #    self.trajs = pickle.load(fp)
         # NOTE: COMMENT OUT IF NOT DEBUGGING
         #tb = TrajectoryBuilder()
         #self.trajs = tb.session()

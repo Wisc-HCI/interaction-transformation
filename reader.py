@@ -35,47 +35,12 @@ class Reader:
             for i in group.iterfind("name"):
                 group_name = i.text
             for i in group.iterfind("micro"):
-                for j in i.iterfind("name"):
-                    parameters = []
-                    param_dict = {}
-                    for k in i.iterfind("parameter"):
-                        if k.attrib["type"] != "array":
-                            name = k.text
-                            type = k.attrib["type"]
-                            val = k.attrib["val"]
-                        else:
-                            val = []
-                            type = "array"
-                            for l in k.iterfind("name"):
-                                name = str(l.text)
-                            for l in k.iterfind("item"):
-                                val.append({"val":str(l.attrib["val"]), "link":str(l.attrib["link"])})
-                        globParam = Global(name, type)
-                        globParam.val = val
-                        parameters.append(globParam)
-                        param_dict[name] = val
-                    #microinteractions.append({"name": j.text,"params": parameters})
-                    #micro_selection.append({"name": j.text,"params": parameters})
-
-                    temp_dict = self.io_data["outputs"]
-                    selected_micro_type = None
-                    for micro_type in temp_dict:
-                        if temp_dict[micro_type]["micro"] == j.text:
-                            is_good = True
-                            for param in temp_dict[micro_type]["params"]:
-                                if param_dict[str(param)] != temp_dict[micro_type]["params"][param]:
-                                    is_good = False
-                                    break
-                            if is_good:
-                                selected_micro_type = micro_type
-                                microinteractions.append({"name": selected_micro_type,"params": parameters})
-                                micro_selection.append({"name": selected_micro_type,"params": parameters})
-                                break
-                    if selected_micro_type is None:
-                        print("ERROR: cannot find microinteraction instantiation")
-                        exit(1)
+                for j in i.iterfind("instantiation"):
+                    selected_micro_type = j.text
+                    microinteractions.append({"name": selected_micro_type,"params": []})
 
             new_state = State(group_name, id, microinteractions)
+            print(new_state.micros)
             states[group_name] = new_state
             if id == "0":
                 init = new_state

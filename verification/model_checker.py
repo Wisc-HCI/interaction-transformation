@@ -104,8 +104,8 @@ class ModelChecker:
         file_string += "\t\t\t\tTRUE : ERROR;\n"
         file_string += "\t\t\t    esac;\n"
 
-        file_string += "\t\tinit(hst) := {Visitation, Delivery, About, Directions, Goodbye, General, Ignore};\n"
-        file_string += "\t\tnext(hst) := {Visitation, Delivery, About, Directions, Goodbye, General, Ignore};\n"
+        file_string += "\t\tinit(hst) := {UnsatRequest, RequestInfo, AskClarify, Affirm, Deny, Goodbye, General, Ignore};\n"
+        file_string += "\t\tnext(hst) := {UnsatRequest, RequestInfo, AskClarify, Affirm, Deny, Goodbye, General, Ignore};\n"
 
         for prop in properties:
             file_string += "{}".format(prop)
