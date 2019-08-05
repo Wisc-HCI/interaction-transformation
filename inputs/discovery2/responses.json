@@ -1,0 +1,11 @@
+{"db_about_selfabilitiesspecific": 
+                                    {"UNKNOWN":["I can do a lot of cool things, like play soccer and even dance!","Did you want to know what I am capable of doing?"]},
+ "db_about_buildingperson": 
+                                    {"UNKNOWN":["I can tell you about a lot of people who make the discovery building possible!","Did you want to know about the people associated with the discovery building?"]},
+ "db_about_directions": 
+                                    {"UNKNOWN":["I can give you directions to lots of places in the building!","Did you want to know where something is?"]},
+ "db_about_parking": 
+                                    {"UNKNOWN":["I can help you find a place to park!","Did you want to know what I am capable of doing?"]},
+ "db_about_parkpricing": 
+                                    {"UNKNOWN":["I know the prices to many garages and lots!","Did you want to know about the pricing of parking?"]}
+}

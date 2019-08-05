@@ -33,9 +33,9 @@
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "CanYouRepeat": {"id":9,"micro":"Wait","content":"false","params":{"content":"I'm sorry, I didn't get that. Can you repeat what you just said?",
-                                                                                 "use_gesture": "true",
-                                                                                 "Allow_human_to_respond": "true"}
+             "CanYouRepeat": {"id":9,"micro":"Wait","content":"false","params":{"look_at_people":"true",
+                                                                                 "allow_speech": "true",
+                                                                                 "wait time (seconds)": "10"}
                         },
              "DidYouSay": {"id":10,"micro":"Remark","content":"false","params":{"content":"$ANSWER_QUESTION",
                                                                                "use_gesture": "true",
