@@ -1,0 +1,65 @@
+{"inputs": {"UnsatRequest": 0, "RequestInfo": 1, "AskClarify": 2, "Affirm": 3, "Deny": 4, "Goodbye": 5, "General": 6, "Ignore": 7},
+ "outputs": {"Greeting": {"id":0,"micro":"Greeter", "content":"false", "params":{"Greet_with_speech":"true",
+                                                            "Greet_with_handshake":"false",
+                                                            "Wait_for_response":"true"}
+                       },
+             "Farewell": {"id":1,"micro":"Farewell","content":"false","params":{}
+                       },
+             "AnswerQuestion": {"id":2,"micro":"Remark","content":"false","params":{"content":"$ANSWER_QUESTION",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "AskSomething": {"id":3,"micro":"Remark","content":"false","params":{"content":"Ask me something about the discovery building or myself! I'll try to answer any question you have.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "ReferToDesk": {"id":4,"micro":"Remark","content":"false","params":{"content":"$REFER_TO_DESK",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "ListOut": {"id":5,"micro":"Remark","content":"false","params":{"content":"Here is what I'm able to do: I can answer questions about the discovery building, such as its history, directions to areas inside the building, parking around the building, or the important people associated with it. I can also answer questions about myself, such as why I'm here and what I can do!",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "DirectionsForListening": {"id":6,"micro":"Remark","content":"false","params":{"content":"You can respond to me by talking. When I beep and my eyes turn green, that means I'm listening.",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "Listening": {"id":7,"micro":"Wait","content":"false","params":{"look_at_people":"true",
+                                                                                 "allow_speech": "true",
+                                                                                 "wait time (seconds)": "10"}
+                        },
+             "FunFacts": {"id":8,"micro":"Remark","content":"false","params":{"content":"Did you know that I can play soccer?",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "CanYouRepeat": {"id":9,"micro":"Wait","content":"false","params":{"content":"I'm sorry, I didn't get that. Can you repeat what you just said?",
+                                                                                 "use_gesture": "true",
+                                                                                 "Allow_human_to_respond": "true"}
+                        },
+             "DidYouSay": {"id":10,"micro":"Remark","content":"false","params":{"content":"$ANSWER_QUESTION",
+                                                                               "use_gesture": "true",
+                                                                               "Allow_human_to_respond": "true"}
+                        },
+             "TellJoke": {"id":11,"micro":"Remark","content":"false","params":{"content":"Here's a funny joke. Why was the robot angry? Because someone was pushing it's buttons!",
+                                                                                  "use_gesture": "true",
+                                                                                  "Allow_human_to_respond": "true"}
+                        }
+            },
+ "interaction_variables": {"$ANSWER_QUESTION":{"input":"RequestInfo"},
+                           "$REFER_TO_DESK":{"input":"UnsatRequest"}},
+ "topic_keywords": {"UnsatRequest": ["unsat_delivery", "unsat_visitation"],
+                    "RequestInfo": ["about_buildingfood", "about_buildingstructure",
+                                    "about_campus", "about_history", "about_selfabilitiesvague",
+                                    "about_selfage", "about_selffrom", "about_selfmood",
+                                    "about_selfpurpose", "db_about_buildingperson",
+                                    "db_about_directions", "db_about_parking", "db_about_parkpricing",
+                                    "db_about_selfabilitiesspecific"],
+                    "AskClarify": ["askclarify"],
+                    "Affirm": ["affirm"],
+                    "Deny": ["deny"],
+                    "Goodbye": ["goodbye"],
+                    "General": ["general_hello"],
+                    "Ignore": ["Ignore"]},
+ "mod_percent": 0.1,
+ "time_mcmc": 500000}

@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nta>
+
+	<name>discovery_task</name>
+
+	<group id="0" init="true" final="false" x="182.0" y="134.0">
+		<name>Greeting</name>
+		<micro>
+			<name>Greeter</name>
+			<instantiation>Greeting</instantiation>
+		</micro>
+	</group>
+
+	<group id="1" init="false" final="false" x="182.0" y="134.0">
+		<name>Farewell</name>
+		<micro>
+			<name>Farewell</name>
+			<instantiation>Farewell</instantiation>
+		</micro>
+	</group>
+
+	<group id="2" init="false" final="false" x="182.0" y="134.0">
+		<name>ListOut</name>
+		<micro>
+			<name>Remark</name>
+			<instantiation>ListOut</instantiation>
+		</micro>
+	</group>
+
+	<group id="3" init="false" final="false" x="182.0" y="134.0">
+		<name>AskSomething</name>
+		<micro>
+			<name>Remark</name>
+			<instantiation>AskSomething</instantiation>
+		</micro>
+	</group>
+
+	<group id="4" init="false" final="false" x="182.0" y="134.0">
+		<name>ReferToDesk</name>
+		<micro>
+			<name>Remark</name>
+			<instantiation>ReferToDesk</instantiation>
+		</micro>
+	</group>
+
+	<group id="5" init="false" final="false" x="182.0" y="134.0">
+		<name>AnswerQuestion</name>
+		<micro>
+			<name>Remark</name>
+			<instantiation>AnswerQuestion</instantiation>
+		</micro>
+	</group>
+
+	<group id="6" init="false" final="false" x="182.0" y="134.0">
+		<name>DidYouSay</name>
+		<micro>
+			<name>Remark</name>
+			<instantiation>DidYouSay</instantiation>
+		</micro>
+	</group>
+
+	<!--FROM Greeting STATE 0-->
+	<transition>
+		<source ref="0"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+		<guard condition="human_affirm"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="0"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<!--From ListOut State 2-->
+	<transition>
+		<source ref="2"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+		<guard condition="human_affirm"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="2"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<!--FROM AskSome STATE 3-->
+	<transition>
+		<source ref="3"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+		<guard condition="human_affirm"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="3"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<!--From AnswerQuestion State 5-->
+	<transition>
+		<source ref="5"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+		<guard condition="human_affirm"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="5"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<!--FROM DidYouSay STATE 6-->
+	<transition>
+		<source ref="6"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<transition>
+		<source ref="6"/>
+		<target ref="5"/>
+		<guard condition="human_affirm"/>
+	</transition>
+
+	<!--From ReferToDesk State 4-->
+	<transition>
+		<source ref="4"/>
+		<target ref="3"/>
+		<guard condition="human_ignore"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="2"/>
+		<guard condition="human_general"/>
+		<guard condition="human_askClarify"/>
+		<guard condition="human_affirm"/>
+		<guard condition="human_deny"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="1"/>
+		<guard condition="human_goodbye"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="6"/>
+		<guard condition="human_requestInfo"/>
+	</transition>
+
+	<transition>
+		<source ref="4"/>
+		<target ref="4"/>
+		<guard condition="human_unsatRequest"/>
+	</transition>
+
+	<design>robot</design>
+</nta>

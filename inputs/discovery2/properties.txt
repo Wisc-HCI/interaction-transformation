@@ -1,0 +1,47 @@
+--------------
+-- the basics
+--------------
+
+-- all paths considered must reach the end
+FAIRNESS st=END;
+
+-- the interaction must reach farewell
+SPEC AF ~st=\Farewell\~
+
+-- after farewell, END must come
+SPEC AG (~st=\Farewell\~ -> AX st=END)
+
+-- an error state should never be reachable
+SPEC AG !(st=ERROR)
+
+---------------------
+-- as required by the desk and study setup
+---------------------
+
+-- after asking about an unsatisfiable request, the next state must ALWAYS refer the human to the desk
+-- SPEC AG (~hst=\UnsatRequest\~ -> AX ~st=\ReferToDesk\~)
+
+-- if the human says goodbye, it's hasta manana
+-- SPEC AG (~hst=\Goodbye\~ -> AX ~st=\Farewell\~)
+
+---------------------
+-- the restricting
+---------------------
+
+-----------------------------------------------------
+-- ANSWER QUESTION PROPERTIES
+-- no state will be followed by didyousay except for requestinfo
+
+
+-- NOTE: check this case of
+-- if a requestinfo is made and the next state is not a didyousay, it must be answered at some point in the future before the next didyousay
+-- SPEC AG (~hst=\RequestInfo\~ & AX ~st!=\DidYouSay\~ -> AF ~st=\AnswerQuestion\~ & A [~st!=\DidYouSay\~ U ~st=\AnswerQuestion\~])
+
+-- if a didyousay occurs and the human affirms it, then in the future it will be answered before the next didyousay
+
+-- if a didyousay occurs and the human denys it, then who cares?
+
+-----------------------------------------------------
+
+-- don't say goodbye if the human said something other than Goodbye or Ignore
+-- SPEC AG ((~hst!=\Goodbye\~ & ~hst!=\Ignore\~) -> !(AX ~st=\Farewell\~))
