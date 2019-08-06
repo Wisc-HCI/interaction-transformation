@@ -82,6 +82,15 @@ class Trajectory:
 
         return string
 
+    def copy(self):
+        new_vect = []
+        for pair in self.vect:
+            new_hum = pair[0].copy()
+            new_mic = pair[1].copy()
+            new_pair = (new_hum,new_mic)
+            new_vect.append(new_pair)
+        return Trajectory(new_vect, self.reward, self.is_prefix, self.is_correctness)
+
     def __len__(self):
         return len(self.vect)
 
@@ -97,6 +106,9 @@ class Microinteraction:
     def get(self):
         return self.type
 
+    def copy(self):
+        return Microinteraction(self.type,self.weight)
+
 class HumanInput:
 
     def __init__(self, type):
@@ -105,3 +117,5 @@ class HumanInput:
     def get(self):
         return self.type
 
+    def copy(self):
+        return HumanInput(self.type)
