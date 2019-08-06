@@ -1,11 +1,56 @@
-{"db_about_selfabilitiesspecific": 
-                                    {"UNKNOWN":["I can do a lot of cool things, like play soccer and even dance!","Did you want to know what I am capable of doing?"]},
- "db_about_buildingperson": 
-                                    {"UNKNOWN":["I can tell you about a lot of people who make the discovery building possible!","Did you want to know about the people associated with the discovery building?"]},
- "db_about_directions": 
-                                    {"UNKNOWN":["I can give you directions to lots of places in the building!","Did you want to know where something is?"]},
- "db_about_parking": 
-                                    {"UNKNOWN":["I can help you find a place to park!","Did you want to know what I am capable of doing?"]},
- "db_about_parkpricing": 
-                                    {"UNKNOWN":["I know the prices to many garages and lots!","Did you want to know about the pricing of parking?"]}
+{
+  "db_about_buildingperson": {
+                              "h f deluca": ["H F Deluca, or Hector DeLuca, is a professor of biochemistry at U W Madison. He is known for his work on Vitamin D.", "Did you want to know about H F Deluca?"],
+                              "jim doyle": ["Jim Doyle is a former governor of Wisconsin who supported the formation of the Discovery Building.", "Did you want to know about Jim Doyle?"],
+                              "tashia morgridge": ["Tashia and John Morgridge helped make the discovery building possible with their generous financial support.", "Did you want to know about Tashia Morgridge?"],
+                              "john morgridge": ["John and Tashia Morgridge helped make the discovery building possible with their generous financial support.", "Did you want to know about John Morgridge?"],
+                              "UNKNOWN": ["There are lots of important people who help make the discovery building a reality.", "Did you want to know about someone?"]
+  },
+  "db_about_selfabilitiesspecific": {
+                                     "stand up": ["I can stand up, but I probably shouldn't do that right now.", "Did you want to know whether I can stand up?"],
+                                     "play fortnite": ["I've heard of that game, but I don't know how to play it.", "Did you want to know if I play fortnite?"],
+                                     "play videogames": ["I like video games!", "Did you want to know if I play videogames?"],
+                                     "play sports": ["I play soccer in my spare time!", "Did you want to know what sports I play?"],
+                                     "dance": ["I can dance! Gangam style is my favorite.", "Did you want to know if I can dance?"],
+                                     "UNKNOWN": ["I am able to do a lot of cool things, like dance and play soccer.", "Did you want to know about what I'm able to do?"]
+  },
+  "db_about_directions": {
+                          "stairs": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "elevators": ["The elevators are just directly east of here, to your right, but you need to speak to a person behind the desk to use them.", "Did you want to know where the elevators are?"],
+                          "restaurants": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "bathrooms": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "tables": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "places to sit": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "trees": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "food": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "restaurants": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "steenbocks": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "steenbocks on orchard": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "aldos": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "aldos cafe": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "saffron": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "discovery niche": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "mesozoic garden": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "water walls": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "fobonacci chimes": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "wisconscience wall": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "fossils": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "media walls": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "h f deluca forum": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "deluca forum": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "atrium": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "cisco telepresence": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "hub central": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "teaching labs": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "orchard view room": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "conference rooms": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "board room": ["You can find stairs in the area right behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
+                          "UNKNOWN": ["I can give you directions to anywhere in the building. Aldo's cafe, for instance, is right behind me, to your right!", "Did you want directions to somewhere?"]
+  },
+  "db_about_parking": {
+                       "UNKNOWN": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"]
+  },
+  "db_about_parkpricing": {
+                       "UNKNOWN": ["I can tell you the prices of various parking lots.", "Did you want to know the price of parking?"]
+  }
 }
