@@ -19,7 +19,7 @@ SPEC AG !(st=ERROR)
 ---------------------
 
 -- after asking about an unsatisfiable request, the next state must ALWAYS refer the human to the desk
--- SPEC AG (~hst=\UnsatRequest\~ -> AX ~st=\ReferToDesk\~)
+SPEC AG ((~hst=\UnsatRequest\~ & ~st!=\Farewell\~) -> AX ~st=\ReferToDesk\~)
 
 -- if the human says goodbye, it's hasta manana
 -- SPEC AG (~hst=\Goodbye\~ -> AX ~st=\Farewell\~)
