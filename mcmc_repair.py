@@ -427,10 +427,18 @@ class MCMCAdapt:
                 correctness_trajs.append(traj)
                 new_eq_vect.append(-1)
             counter += 1
+
+        curr_counterexamples = []
         for counterexample in counterexamples:
             if counterexample is not None:
-                print("\nPROPERTY {} VIOLATED -- prefix=False".format(counter))
+                #print("PROPERTY {} VIOLATED -- prefix=False".format(counter))
                 traj = self.build_trajectory_from_nusmv(counterexample, TS)
+                #print(traj)
+                if str(traj) in curr_counterexamples:
+                    continue
+                else:
+                    curr_counterexamples.append(str(traj))
+                #print(traj)
                 # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
                 #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
 
@@ -510,7 +518,7 @@ class MCMCAdapt:
                 output_mapping[trans.condition] = target_state.name
             for trans in state.in_trans:
                 source_state = trans.source
-                if (source_state,trans.condition) in mod_tracker.mod_tracker and mod_tracker.mod_tracker[(source_state,trans.condition)][0] == 0 and output_mapping[trans.condition] != state.name:
+                if (source_state,trans.condition) in mod_tracker.mod_tracker and mod_tracker.mod_tracker[(source_state,trans.condition)][0] == 0 and (trans.condition not in output_mapping or (trans.condition in output_mapping and output_mapping[trans.condition] != state.micros[0]["name"])):
                     num_displaced += 1
 
             if num_displaced <= self.mod_limit - num_mods:
@@ -785,7 +793,7 @@ class MCMCAdapt:
         elif selection == 6:  # delete existing state
             #print("~CHOICE~: state deletion -- ")
             # choose a state
-            #pre_ts = TS.copy()
+            pre_ts = TS.copy()
             #state = random.choice(added_states)
             state = random.choice(allowable_added_states_to_delete)
             #print("   deleting existing state: {}".format(state.name))
@@ -858,7 +866,7 @@ class MCMCAdapt:
             if self.mod_limit < mod_tracker.check_mod_tracker_sum():
                 print("ERROR: removing a state (6) resulted in more mods than allowed")
                 SMUtil().build(pre_ts.transitions, pre_ts.states)
-                #print(pre_ts)
+                print(pre_ts)
                 print(self.TS)
                 print(TS)
                 exit()
