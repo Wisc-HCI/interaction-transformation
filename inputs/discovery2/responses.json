@@ -63,6 +63,15 @@
                           "UNKNOWN": ["I can give you directions to anywhere in the building. Aldo's cafe, for instance, is right behind me, to your right!", "Did you want directions to somewhere?"]
   },
   "db_about_parking": {
+                       "available parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "cheap parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "closeby parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "disabled parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "free parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "garage": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "nearby parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "parking lot": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
+                       "temporary parking": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"],
                        "UNKNOWN": ["There are lots of places to park around the discovery building. Union South Garage is very close but also very popular. Lake and Johnson Ramp is also good because they always have spaces available!", "Did you want to know about parking?"]
   },
   "db_about_parkpricing": {
