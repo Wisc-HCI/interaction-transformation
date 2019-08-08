@@ -28,25 +28,15 @@ SPEC AG ((~hst=\Goodbye\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> A
 -- the restricting
 ---------------------
 
------------------------------------------------------
--- ANSWER QUESTION PROPERTIES
--- no state will be preceded by didyousay except for requestinfo
--- SPEC AG ()
+-- do not answer a question or say DidYouSay unless a question has been asked
+SPEC A [ (~st!=\AnswerQuestion\~ & ~st!=\DidYouSay\~) U (~hst=\RequestInfo\~ | ~st!=\Farewell\~)]
 
 -- if a didyousay occurs (not during the end of the interaction) and the human affirms it,
 -- then at some point in the future the robot MUST answer the query
-SPEC AG ((~hst=\Affirm\~ & ~st=\DidYouSay\~) -> AF ~st=\AnswerQuestion\~)
+SPEC AG ((~hst=\Affirm\~ & ~st=\DidYouSay\~) -> AX ~st=\AnswerQuestion\~)
 
 -- if a request for info occurs, then EITHER a didyousay OR an answer question MUST occur in the future
-SPEC AG ((~hst=\RequestInfo\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> AF (~st=\AnswerQuestion\~ | ~st=\DidYouSay\~))
-
--- NOTE: check this case of
--- if a requestinfo is made and the next state is not a didyousay, it must be answered at some point in the future before the next didyousay
--- SPEC AG (~hst=\RequestInfo\~ & AX ~st!=\DidYouSay\~ -> AF ~st=\AnswerQuestion\~ & A [~st!=\DidYouSay\~ U ~st=\AnswerQuestion\~])
-
--- if a didyousay occurs and the human affirms it, then in the future it will be answered before the next didyousay
-
--- if a didyousay occurs and the human denys it, then who cares?
+SPEC AG ((~hst=\RequestInfo\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> AX (~st=\AnswerQuestion\~ | ~st=\DidYouSay\~))
 
 -----------------------------------------------------
 
