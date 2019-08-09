@@ -15,7 +15,7 @@
                                      "UNKNOWN": ["I am able to do a lot of cool things, like dance and play soccer.", "Did you want to know about what I'm able to do?"]
   },
   "db_about_directions": {
-                          "stairs": ["", "Did you want to know where the stairs are?"],
+                          "stairs": ["The stairs are just behind me, but you need to speak to a person behind the desk to use them.", "Did you want to know where the stairs are?"],
                           "elevators": ["The elevators are just directly east of here, to your right, but you need to speak to a person behind the desk to use them.", "Did you want to know where the elevators are?"],
                           "bathrooms": ["The bathrooms are just directly east of here, to your right.", "Did you want to know where the bathrooms are?"],
                           "tables": ["There are tables all around the building! There are some right in front of you to your left, and some more right behind you!", "Did you want to know where the tables are?"],

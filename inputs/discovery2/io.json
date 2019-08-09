@@ -29,7 +29,7 @@
                                                                                  "allow_speech": "true",
                                                                                  "wait time (seconds)": "10"}
                         },
-             "FunFacts": {"id":8,"micro":"Remark","content":"false","params":{"content":"Did you know that I can play soccer?",
+             "FunFacts": {"id":8,"micro":"Remark","content":"false","params":{"content":"&FunFacts",
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
@@ -41,13 +41,25 @@
                                                                                "use_gesture": "true",
                                                                                "Allow_human_to_respond": "true"}
                         },
-             "TellJoke": {"id":11,"micro":"Remark","content":"false","params":{"content":"Here's a funny joke. Why was the robot angry? Because someone was pushing it's buttons!",
+             "Apologize": {"id":10,"micro":"Remark","content":"false","params":{"content":"I'm sorry if I'm not answering your questions correctly!",
+                                                                                          "use_gesture": "true",
+                                                                                          "Allow_human_to_respond": "false"}
+                        },
+             "TellJoke": {"id":11,"micro":"Remark","content":"false","params":{"content":"&Jokes",
                                                                                   "use_gesture": "true",
-                                                                                  "Allow_human_to_respond": "true"}
+                                                                                  "Allow_human_to_respond": "false"}
                         }
             },
  "interaction_variables": {"$ANSWER_QUESTION":{"input":"RequestInfo"},
                            "$REFER_TO_DESK":{"input":"UnsatRequest"}},
+ "varying_speech": {"&Jokes": ["Here's a funny joke. Why was the robot angry? \\pau=2000\\ Because someone was pushing it's buttons!",
+                               "What was the robot's favorite style of  music? \\pau=2000\\ Heavy metal.",
+                               "Why do robots have summer holidays? \\pau=2000\\ To recharge their batteries."],
+                    "&FunFacts": ["Did you know that I can play soccer?",
+                                  "Did you know that there are three restaurants in the Discovery building?",
+                                  "Did you know that construction for the Discovery Building was completed in 2008?",
+                                  "Did you know that I was made by a French company?"]
+ },
  "topic_keywords": {"UnsatRequest": ["unsat_delivery", "unsat_visitation"],
                     "RequestInfo": ["about_buildingage", "about_buildingfood",
                                     "about_buildingresearchers", "about_buildingstructure",
