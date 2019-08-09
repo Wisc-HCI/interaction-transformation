@@ -33,10 +33,10 @@
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "CanYouRepeat": {"id":9,"micro":"Wait","content":"false","params":{"look_at_people":"true",
-                                                                                 "allow_speech": "true",
-                                                                                 "wait time (seconds)": "10"}
-                        },
+             "CanYouRepeat": {"id":8,"micro":"Remark","content":"false","params":{"content":"I'm sorry, I didn't catch what you said. Can you repeat it?",
+                                                                                            "use_gesture": "true",
+                                                                                            "Allow_human_to_respond": "true"}
+                                   },
              "DidYouSay": {"id":10,"micro":"Remark","content":"false","params":{"content":"$ANSWER_QUESTION",
                                                                                "use_gesture": "true",
                                                                                "Allow_human_to_respond": "true"}
