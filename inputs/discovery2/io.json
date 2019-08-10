@@ -64,7 +64,7 @@
                     "RequestInfo": ["about_buildingage", "about_buildingfood",
                                     "about_buildingresearchers", "about_buildingstructure",
                                     "about_campus", "about_city", "about_history",
-                                    "about_otherfloors", "about_selfabilitiesvague",
+                                    "about_otherfloors", "about_reservespace", "about_selfabilitiesvague",
                                     "about_selfage", "about_selffrom",
                                     "about_selfgeneral", "about_selfmood",
                                     "about_selfpurpose", "about_todo", "db_about_building_items",
