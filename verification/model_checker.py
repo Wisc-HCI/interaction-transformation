@@ -114,6 +114,5 @@ class ModelChecker:
             outfile.write(file_string)
 
     def check(self):
-        print("checking model")
         results, counterexamples = tools.tlace.tlace.check_and_explain("verification/model.smv")
         return results, counterexamples
