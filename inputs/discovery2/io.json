@@ -79,4 +79,5 @@
                     "General": ["general_hello"],
                     "Ignore": ["Ignore"]},
  "mod_percent": 0.02,
+ "good_thresh": 0.0,
  "time_mcmc": 500000}
