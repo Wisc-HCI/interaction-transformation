@@ -32,6 +32,7 @@ class MCMCAdapt:
 
         self.mod_limit = int(round(mod_perc*(len(self.inputs.alphabet)*len(self.TS.states))))
         #self.mod_limit = int(round(mod_perc*(14)))
+        self.num_state_limit = int(round(mod_perc*(2*len(self.TS.states))))
 
         self.setup_helper = SMTSetup()
 
@@ -137,7 +138,7 @@ class MCMCAdapt:
         best_result = -1
         print("duplicating transition")
         overall_best_design = [TS,[TS.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]]
-        break_time = 36000
+        break_time = 28800
 
         # notify log that we're beginning to adapt
         self.log.write("adaptation beginning")
@@ -203,7 +204,13 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             start_time = time.time()
-            while i < 500000:
+            while i < 5000:
+
+                # if i == 0, check to see if we're already at the total reward
+                if i == 0:
+                    if best_design[2] >= max_possible_reward:
+                        print("the current design is already the best, so returning that")
+                        break
 
                 # get the current time
                 curr_time = time.time()
@@ -327,6 +334,10 @@ class MCMCAdapt:
                         best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
                         best_design[2] = total_reward
                         best_design[3] = traj_status
+
+                        if best_design[2] >= max_possible_reward:
+                            print("found the best interaction, so breaking!")
+                            break
 
                 if curr_time - start_time > 5:
                     print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
@@ -505,7 +516,7 @@ class MCMCAdapt:
                 if len(state.in_trans) <= self.mod_limit-num_mods:
                     for trans in state.in_trans:
                         allowable_new_state_trans_mods.append(trans)
-        num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 else 0
+        num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 and num_added_states <= self.num_state_limit else 0
 
         # num_deletions = 1 if there is an added state where deleting it won't cause the number of mods to go over the limit
         # this is a list of states that we can actually dleete

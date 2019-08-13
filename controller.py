@@ -20,8 +20,14 @@ class Controller:
         json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
 
+        newdir = os.path.join(os.getcwd(), 'result_files')
+        if not os.path.isdir(newdir):
+            os.mkdir(newdir)
+        else:
+            print("CONTROLLER >> ERROR >> result files exist and cannot be overwritten!")
+
         # initialize the log
-        self.log = AdaptLog()
+        self.log = AdaptLog("result_files")
 
         # read the interaction
         self.json_exp = JSONExporter()
@@ -39,19 +45,42 @@ class Controller:
         self.mod_perc = json_data["mod_percent"]
         self.time_mcmc = json_data["time_mcmc"]
 
+        self.json_data = json_data
 
         # read in arrays, form trajectories
-        #self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        original_interaction_trajs = TrajectoryReader("inputs/{}/oi_history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
-        self.trajs = []
+        #self.trajs = []
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
+
+        # get original interaction rewards
+        #with open("inputs/{}/oi_history.pkl".format(self.path_to_interaction), "rb") as fp:
+        #    original_interaction_trajs = pickle.load(fp)
         # NOTE: COMMENT OUT IF NOT DEBUGGING
         #tb = TrajectoryBuilder()
         #self.trajs = tb.session()
 
-        # artificially make trajectories
+        # remove final human/robot actions from prefixes
+        print("\nCONTROLLER >> trimming prefixes")
+        self.print_trajs(self.trajs)
+        self.trim_prefixes()
+        print("\nCONTROLLER >> prefixes trimmed")
+        self.print_trajs(self.trajs)
+
+        # remove final human/robot actions from prefixes
+        print("CONTROLLER >> finding baseline")
+        for traj in self.trajs:
+            print(traj.reward)
+        baseline = self.find_baseline(original_interaction_trajs)
+        print("CONTROLLER >> baseline set to {}".format(baseline))
+        print("CONTROLLER >> offsetting rewards based on baseline")
+        self.offset_rewards(baseline)
+        for traj in self.trajs:
+            print(traj.reward)
+        exit()
 
         #self.trajs = []
         '''
@@ -127,6 +156,11 @@ class Controller:
         with open("correctness_trajs.pkl", "wb") as fp:
             pickle.dump(correctness_trajs, fp)
 
+
+        # export the interaction
+        exporter = TSExporter(self.TS, self.json_data)
+        exporter.export("result_files/updated_interaction.xml")
+
         #with open("TS.txt", "wb") as fp:
         #    fp.write(self.TS)
 
@@ -166,6 +200,24 @@ class Controller:
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
+
+    def trim_prefixes(self):
+        for traj in self.trajs:
+            if traj.is_prefix:
+                if traj.vect[-1][1].type == "END":
+                    del traj.vect[-1]
+
+    def find_baseline(self, oi_trajs):
+        total_reward = 0
+        number_trajectories = 0
+        for traj in oi_trajs:
+            total_reward += traj.reward
+            number_trajectories += 1
+        return total_reward*1.0/number_trajectories
+
+    def offset_rewards(self, baseline):
+        for traj in self.trajs:
+            traj.reward -= baseline
 
     def consolidate_trajectories(self):
         #print("RAW TRAJS")
