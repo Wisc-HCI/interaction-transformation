@@ -10,6 +10,7 @@ from verification.prism_util import *
 from reader import *
 from trajectory_builder import *
 from log import *
+from ts_exporter import *
 import util
 import pickle
 
@@ -65,22 +66,18 @@ class Controller:
 
         # remove final human/robot actions from prefixes
         print("\nCONTROLLER >> trimming prefixes")
-        self.print_trajs(self.trajs)
+        #self.print_trajs(self.trajs)
         self.trim_prefixes()
         print("\nCONTROLLER >> prefixes trimmed")
-        self.print_trajs(self.trajs)
+        #self.print_trajs(self.trajs)
 
         # remove final human/robot actions from prefixes
         print("CONTROLLER >> finding baseline")
-        for traj in self.trajs:
-            print(traj.reward)
-        baseline = self.find_baseline(original_interaction_trajs)
+        #baseline = self.find_baseline(original_interaction_trajs)
+        baseline = 0.0
         print("CONTROLLER >> baseline set to {}".format(baseline))
         print("CONTROLLER >> offsetting rewards based on baseline")
         self.offset_rewards(baseline)
-        for traj in self.trajs:
-            print(traj.reward)
-        exit()
 
         #self.trajs = []
         '''
@@ -121,6 +118,8 @@ class Controller:
             if not exists:
                 self.micro_selection.append({"name": micro})
 
+        print(self.outputs.alphabet)
+
         # calculate frequencies associated with states
         self.freqs.build_ds(self.inputs, self.outputs)
         self.freqs.calculate_freqs(self.trajs)
@@ -143,9 +142,11 @@ class Controller:
 
         print("STARTING INTERACTION")
         print(self.TS)
+        exporter = TSExporter(self.TS, self.json_data)
+        exporter.export("result_files")
         self.log.open()
         mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log)
-        self.TS, st_reachables, correctness_trajs = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
+        self.TS, st_reachables, correctness_trajs, mod_tracker = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
@@ -159,7 +160,7 @@ class Controller:
 
         # export the interaction
         exporter = TSExporter(self.TS, self.json_data)
-        exporter.export("result_files/updated_interaction.xml")
+        exporter.export("result_files", mod_tracker)
 
         #with open("TS.txt", "wb") as fp:
         #    fp.write(self.TS)

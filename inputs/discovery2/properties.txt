@@ -29,7 +29,7 @@ SPEC AG ((~hst=\Goodbye\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> A
 ---------------------
 
 -- do not answer a question or say DidYouSay unless a question has been asked
-SPEC A [ (~st!=\AnswerQuestion\~ & ~st!=\DidYouSay\~) U ((~hst=\RequestInfo\~ & (~s!=\AnswerQuestion\~ & ~st!=\DidYouSay\~)) | ~st!=\Farewell\~)]
+SPEC A [ (~st!=\AnswerQuestion\~ & ~st!=\DidYouSay\~) U ((~hst=\RequestInfo\~ & !(~st=\AnswerQuestion\~ | ~st=\DidYouSay\~)) | ~st=\Farewell\~)]
 
 -- if a didyousay occurs (not during the end of the interaction) and the human affirms it,
 -- then at some point in the future the robot MUST answer the query

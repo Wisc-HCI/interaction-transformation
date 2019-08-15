@@ -38,6 +38,12 @@ class Reader:
                 for j in i.iterfind("instantiation"):
                     selected_micro_type = j.text
                     microinteractions.append({"name": selected_micro_type,"params": []})
+                    exists = False
+                    for selection in micro_selection:
+                        if selection["name"] == selected_micro_type:
+                            exists = True
+                    if not exists:
+                        micro_selection.append({"name": selected_micro_type})
 
             new_state = State(group_name, id, microinteractions)
             print(new_state.micros)
@@ -177,12 +183,20 @@ class TrajectoryReader:
 
         print(raw_traj)
 
-        traj_vect = [(HumanInput("General"),Microinteraction(raw_traj[0][0]))]
+        traj_vect = [(HumanInput("General"),Microinteraction(raw_traj[0][0].decode("utf-8")))]
 
         i = 1
         while i < len(raw_traj)-1:
 
-            micro = Microinteraction(raw_traj[i+1][0])
+            # SOME MICROS ARE BYTES, OTHERS ARE NOT
+            # -- THIS DOES NOT MATTER FOR PYTHON 2 (where the trajectories are generated)
+            # -- BUT MATTERS FOR PYTHON 3
+            micro_name = raw_traj[i+1][0]
+            try:
+                micro_name = micro_name.decode("utf-8")
+            except AttributeError:
+                pass
+            micro = Microinteraction(micro_name)
             raw_human_input = raw_traj[i][-1].decode("utf-8")
             inp = raw_human_input[raw_human_input.index("_")+1].upper() + raw_human_input[raw_human_input.index("_")+2:]
             #if raw_human_input.decode("utf-8")  == "human_ready":

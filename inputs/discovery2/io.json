@@ -33,7 +33,7 @@
                                                                                  "use_gesture": "true",
                                                                                  "Allow_human_to_respond": "true"}
                         },
-             "CanYouRepeat": {"id":8,"micro":"Remark","content":"false","params":{"content":"I'm sorry, I didn't catch what you said. Can you repeat it?",
+             "CanYouRepeat": {"id":9,"micro":"Remark","content":"false","params":{"content":"I'm sorry, I didn't catch what you said. Can you repeat it?",
                                                                                             "use_gesture": "true",
                                                                                             "Allow_human_to_respond": "true"}
                                    },
@@ -41,11 +41,11 @@
                                                                                "use_gesture": "true",
                                                                                "Allow_human_to_respond": "true"}
                         },
-             "Apologize": {"id":10,"micro":"Remark","content":"false","params":{"content":"I'm sorry if I'm not answering your questions correctly!",
+             "Apologize": {"id":11,"micro":"Remark","content":"false","params":{"content":"I'm sorry if I'm not answering your questions correctly!",
                                                                                           "use_gesture": "true",
                                                                                           "Allow_human_to_respond": "false"}
                         },
-             "TellJoke": {"id":11,"micro":"Remark","content":"false","params":{"content":"&Jokes",
+             "TellJoke": {"id":12,"micro":"Remark","content":"false","params":{"content":"&Jokes",
                                                                                   "use_gesture": "true",
                                                                                   "Allow_human_to_respond": "false"}
                         }
@@ -78,6 +78,6 @@
                     "Goodbye": ["goodbye"],
                     "General": ["general_hello"],
                     "Ignore": ["Ignore"]},
- "mod_percent": 0.02,
+ "mod_percent": 0.3,
  "good_thresh": 0.0,
  "time_mcmc": 500000}

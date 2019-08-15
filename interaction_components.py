@@ -43,7 +43,7 @@ class Frequencies:
                 start_state = step[1].type
                 choice = vect[i+1][0].type
 
-                self.freqs[start_state][choice] += 1
+                self.freqs[str(start_state)][choice] += 1
 
     def calculate_probabilities(self, inputs, outputs):
 

@@ -1,3 +1,5 @@
+import pickle
+
 class ModificationTracker:
 
     def __init__(self):
@@ -79,6 +81,22 @@ class ModificationTracker:
             if self.mod_tracker[item][0] == 1:
                 mods.append(item)
         return mods
+
+    def copy(self):
+        new_mc = ModificationTracker()
+        for item in self.mod_tracker:
+            new_mc.mod_tracker[item] = self.mod_tracker[item]
+        return new_mc
+
+    def write_to_file(self,path):
+        # create a condensed version
+        condensed_mod_tracker = {}
+        for item in self.mod_tracker:
+            state_id = item[0].id
+            condensed_mod_tracker[(state_id,item[1])] = self.mod_tracker[item]
+
+        with open("{}/best_mod_tracker.pkl".format(path), "wb") as outfile:
+            pickle.dump(condensed_mod_tracker,outfile)
 
     def __str__(self):
         string = ""
