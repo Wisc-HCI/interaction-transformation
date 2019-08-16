@@ -172,6 +172,14 @@ class App(QMainWindow):
         self.distance_window.set_ylabel("distance")
         #self.distance_window.update_graph([])
 
+        self.modification_label = QLabel(parent=self.control_panel)
+        self.modification_label.setGeometry(10,self.height-290, 400,200)
+        self.modification_label.setText("Modifications:")
+
+    def set_mod_text(self, text):
+        self.modification_label.setText("Modifications:\n{}".format(text))
+        app.processEvents()
+
     def load_graph(self):
         url = QUrl.fromLocalFile("{}/d3js/example2.html".format(os.getcwd()))
         self.webView.load(url)
@@ -206,7 +214,7 @@ class App(QMainWindow):
             self.trace_list.addItem(item)
 
     def mcmc_adapt(self):
-        self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
+        self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel, self.set_mod_text)
         self.load_graph()
 
     def random_adapt(self):

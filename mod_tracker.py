@@ -44,6 +44,10 @@ class ModificationTracker:
         return sum
 
     def check_mod_tracker_empties(self, removed_transitions):
+        '''
+        count how many removed transitions are modded transitions
+        (those that aren't supposed to be removed)
+        '''
         sum = 0
         for item in self.mod_tracker:
             if self.mod_tracker[item][0] == 1:
@@ -52,10 +56,31 @@ class ModificationTracker:
                         sum += 1
         return sum
 
-    def get_mod_tracker_nonempty_trans(self, removed_transitions):
-        trans_mods = []
+    def check_mod_tracker_nonempties(self, removed_transitions):
+        '''
+        count how many NOT removed transitions are modded transitions
+        (those that aren't supposed to be removed)
+        '''
+        sum = 0
         for item in self.mod_tracker:
             if self.mod_tracker[item][0] == 1:
+                for trans in item[0].out_trans:
+                    if trans.condition == item[1]:
+                        not_exists = True
+                        for rtrans in removed_transitions:
+                            if trans.source == rtrans.source and trans.condition == rtrans.condition:
+                                not_exists = False
+                        if not_exists:
+                            sum += 1
+        return sum
+
+    def get_mod_tracker_nonempty_trans(self, removed_transitions):
+        '''
+        point here is to get the modified transitions that are NOT removed
+        '''
+        trans_mods = []
+        for item in self.mod_tracker:
+            if self.mod_tracker[item][0] == 1:   # if we're looking at a modification
                 for trans in item[0].out_trans:
                     if trans.condition == item[1]:
                         exists_in_removed = False
@@ -67,6 +92,9 @@ class ModificationTracker:
         return trans_mods
 
     def get_mod_tracker_empty_trans(self, removed_transitions):
+        '''
+        point here is to get the modified transitions that ARE removed
+        '''
         trans_mods = []
         for item in self.mod_tracker:
             if self.mod_tracker[item][0] == 1:

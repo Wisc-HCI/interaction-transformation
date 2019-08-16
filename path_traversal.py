@@ -82,9 +82,12 @@ class PathTraversal:
                 #print("sat")
                 trajectory_status[traj] = traj.reward
                 if traj.is_correctness:
-                    eqs.append(traj.reward)
+                    eqs.append(traj)
                 else:
                     sats.append(traj.reward)
+
+        #if len(eqs) == 0:
+        #    print("no correctness trajectories exist within the interaction")    
 
         #exit(0)
         #return sats, probs, trajectory_status

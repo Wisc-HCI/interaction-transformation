@@ -73,8 +73,8 @@ class Controller:
 
         # remove final human/robot actions from prefixes
         print("CONTROLLER >> finding baseline")
-        #baseline = self.find_baseline(original_interaction_trajs)
-        baseline = 0.0
+        baseline = self.find_baseline(original_interaction_trajs)
+        #baseline = 0.0
         print("CONTROLLER >> baseline set to {}".format(baseline))
         print("CONTROLLER >> offsetting rewards based on baseline")
         self.offset_rewards(baseline)
@@ -127,7 +127,7 @@ class Controller:
 
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
-    def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, algorithm="mcmc"):
+    def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, update_mod_panel, algorithm="mcmc"):
 
         plot_data = { "rewards": [],
                       "progress": [],
@@ -145,7 +145,7 @@ class Controller:
         exporter = TSExporter(self.TS, self.json_data)
         exporter.export("result_files")
         self.log.open()
-        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log)
+        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
         self.TS, st_reachables, correctness_trajs, mod_tracker = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)

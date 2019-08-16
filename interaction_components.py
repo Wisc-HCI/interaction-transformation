@@ -57,11 +57,12 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward, is_prefix, is_correctness=False):
+    def __init__(self, vect, reward, is_prefix, is_correctness=False, correctness_id=-1):
         self.vect = vect
         self.reward = reward
         self.is_prefix = is_prefix
         self.is_correctness = is_correctness
+        self.correctness_ids = [correctness_id]
 
     def eliminate_section(self, start_inc, end_inc):
         self.vect = self.vect[:start_inc] + self.vect[end_inc:]

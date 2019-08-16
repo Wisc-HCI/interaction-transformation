@@ -18,7 +18,7 @@ import util
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm, log):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm, log, update_mod_panel):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
@@ -26,9 +26,11 @@ class MCMCAdapt:
         self.outputs = outputs
         self.micro_selection = micro_selection
         self.update_trace_panel = update_trace_panel
+        self.update_mod_panel = update_mod_panel
         self.path_to_interaction = path_to_interaction
         self.algorithm=algorithm
         self.log = log
+        self.num_properties = None
 
         self.mod_limit = int(round(mod_perc*(len(self.inputs.alphabet)*len(self.TS.states))))
         #self.mod_limit = int(round(mod_perc*(14)))
@@ -58,9 +60,6 @@ class MCMCAdapt:
         print(self.transition_faults)
         print(self.mod_limit)
         print(self.num_state_limit)
-
-        self.moddable_sts = self.determine_modifiable_states()
-        self.moddable_trans = self.determine_modifiable_transitions()
 
     def localize_faults(self):
 
@@ -96,12 +95,12 @@ class MCMCAdapt:
         for trans_pair,severities in transition_fault_severity.items():
             self.transition_faults[trans_pair] = sum(severities)*1.0/len(severities)
 
-    def determine_modifiable_states(self):
+    def determine_modifiable_states(self, TS):
         modifiable_states = []
 
         scores = {}
 
-        for st_name in self.TS.states:
+        for st_name in TS.states:
             # ignore states that aren't scored
             if st_name not in self.state_faults:
                 continue
@@ -109,9 +108,9 @@ class MCMCAdapt:
             score = self.state_faults[st_name]
 
             if score not in scores:
-                scores[score] = [self.TS.states[st_name]]
+                scores[score] = [TS.states[st_name]]
             else:
-                scores[score].append(self.TS.states[st_name])
+                scores[score].append(TS.states[st_name])
 
         sorted_scores = sorted(list(scores.keys()))
         print(sorted_scores)
@@ -140,12 +139,12 @@ class MCMCAdapt:
             print(st.micros[0]["name"])
         return modifiable_states
 
-    def determine_modifiable_transitions(self):
+    def determine_modifiable_transitions(self, TS):
         modifiable_trans = []
 
         scores = {}
 
-        for source_id, tar_dict in self.TS.transitions.items():
+        for source_id, tar_dict in TS.transitions.items():
             for target_id, trans_dict in tar_dict.items():
                 for trans in trans_dict:
                     tup = (trans.source.micros[0]["name"],trans.condition,trans.target.micros[0]["name"])
@@ -260,6 +259,8 @@ class MCMCAdapt:
 
         # copy the TS
         TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
+        self.moddable_sts = self.determine_modifiable_states(TS)
+        self.moddable_trans = self.determine_modifiable_transitions(TS)
 
         # setup LTL property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
@@ -335,13 +336,16 @@ class MCMCAdapt:
             total_reward = sum(reward_vect)
             #precost = self.get_cost(reward_vect, distance)
             perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max, num_non_correctness_trajs)
-            eq_cost = self.get_eq_cost(unweighted_eq_vect)
+            new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs, prop_tracker)
+            eq_cost = self.get_eq_cost(new_eq_vect)
+            #eq_cost = self.get_eq_cost(unweighted_eq_vect)
+            #print("{} - {}".format(perf_cost, eq_cost))
             precost = perf_cost + eq_cost
 
             accept_counter = 0
             reject_counter = 0
             TS_copy = TS.copy()
-            print("duplicating transition 2")
+            #print("duplicating transition 2")
             best_design = [TS_copy,[TS_copy.duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions],sum(reward_vect), traj_status]
 
             # determine the maximum possible reward
@@ -354,7 +358,7 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             #start_time = time.time()
-            total_itr = 50000
+            total_itr = 1000
             best_distance = distance
             while i < total_itr:
 
@@ -374,7 +378,7 @@ class MCMCAdapt:
                 plot_data["rewards"].append(sum(reward_vect))
                 plot_data["progress"].append(best_design[2])
                 plot_data["cost"].append(precost)
-                plot_data["props"].append(sat_ratio)
+                plot_data["props"].append(eq_cost)
                 plot_data["distances"].append(distance)
                 #plot_data["time"].append(curr_time)
 
@@ -433,20 +437,32 @@ class MCMCAdapt:
                 '''
                 END THREADABLE
                 '''
+
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
                 total_reward = sum(new_reward_vect)
                 #print(total_reward)
                 #postcost = self.get_cost(new_reward_vect,distance)
                 perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, num_non_correctness_trajs)
+                #print(unweighted_eq_vect)
                 eq_cost = self.get_eq_cost(unweighted_eq_vect)
+
+                '''
+                if new_distance == 0:
+                    print(eq_cost)
+                    print(unweighted_eq_vect)
+                    print(TS)
+                    exit()
+                '''
 
                 # if eq cost is 0, run the model checker
                 if eq_cost == 0:
-                    #print("running the model checker")
+                    #print("running the model checker {}".format(i))
                     prop_tracker.append([i])
                     new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs, prop_tracker)
                     eq_cost = self.get_eq_cost(new_eq_vect)
+                    #if eq_cost == 0:
+                        #print("found correct interaction")
                     #print("new eq_cost: {}".format(eq_cost))
                     models_checked += 1
                     #exit()
@@ -455,9 +471,16 @@ class MCMCAdapt:
                     models_unchecked += 1
                     #exit()
 
+                #print("{} - {}".format(perf_cost, eq_cost))
+
                 postcost = perf_cost + eq_cost
+                #print(postcost)
+                #postcost = eq_cost
 
                 alpha = min(1, math.exp(-0.1 * (postcost*1.0/(precost if precost>0 else 0.01))))
+                #print(math.exp(-0.1 * (postcost*1.0/(precost if precost>0 else 0.01))))
+                #print(alpha)
+                #print("~~~~~")
                 u = np.random.random()
 
                 # accept or reject
@@ -497,6 +520,7 @@ class MCMCAdapt:
                     models_checked = 0
                     models_unchecked = 0
                 i+=1
+                #time.sleep(0.1)
 
             # plot everything
             with open("plot_data.pkl", "wb") as fp:
@@ -588,7 +612,7 @@ class MCMCAdapt:
             if counterexample is not None:
                 #print("\nPROPERTY {} VIOLATED -- prefix={}".format(counter, counterexample[1]))
                 prop_tracker[-1].append("kosa")
-                traj = self.build_trajectory(counterexample[0], TS.states, -1, counterexample[2], is_prefix=counterexample[1])
+                traj = self.build_trajectory(counterexample[0], TS.states, -1, counterexample[2], is_prefix=counterexample[1], counter=0)
                 # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
                 #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
                 self.trajs.append(traj)
@@ -597,21 +621,22 @@ class MCMCAdapt:
             #counter += 1
 
         counter = 1
-        curr_counterexamples = []
+        curr_counterexamples = {}
         #print("~~~~~~~~~~")
         for counterexample in counterexamples:
             if counterexample is not None:
 
                 #if counter == 7:
-                #    print("PROPERTY {} VIOLATED -- prefix=?".format(counter))
+                #print("PROPERTY {} VIOLATED -- prefix=?".format(counter))
                 prop_tracker[-1].append(str(counter))
-                traj = self.build_trajectory_from_nusmv(counterexample, TS)
+                traj = self.build_trajectory_from_nusmv(counterexample, TS, counter=counter)
                 #if counter == 7:
                 #print(traj)
                 if str(traj) in curr_counterexamples:
+                    curr_counterexamples[str(traj)].correctness_ids.append(counter)
                     continue
                 else:
-                    curr_counterexamples.append(str(traj))
+                    curr_counterexamples[str(traj)] = traj
                 #print(traj)
                 # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
                 #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
@@ -626,20 +651,37 @@ class MCMCAdapt:
 
                 self.trajs.append(traj)
                 correctness_trajs.append(traj)
-                new_eq_vect.append(-1)
+                new_eq_vect.append(traj)
             counter += 1
 
         #print("~~~~~~~~~~\n\n\n\n\n\n")
+        if self.num_properties is None:
+            self.num_properties = counter
 
         return new_eq_vect
 
-    def modify_TS(self, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
-        num_states = len(list(TS.states))
+    def modify_TS(self, TS, all_trans_all, all_states_all, added_states, modified_states, removed_transitions_all, mod_tracker):
+
+        # throttle the TS modifier
+        all_trans = list(set(all_trans_all) & set(self.moddable_trans))
+        all_states = list(set(all_states_all) & set(self.moddable_sts))
+        removed_transitions = list(set(removed_transitions_all) & set(self.moddable_trans))
+
+        #if len(added_states) > 0:
+        #    for added_state in added_states:
+        #        print(added_state.name)
+
+        # print(all_trans)
+        # print(all_states)
+        # print(removed_transitions)
+        # done throttling
+
         num_trans = len(all_trans)
         num_added_states = len(added_states)
 
         num_mods = mod_tracker.check_mod_tracker_sum()
         num_empties = mod_tracker.check_mod_tracker_empties(removed_transitions)
+        num_nonempties = mod_tracker.check_mod_tracker_nonempties(removed_transitions)
         mod_limited = num_mods >= self.mod_limit
         #print("STATUS: {} mods performed, {} empty ones, limited? {}".format(num_mods, num_empties, mod_limited))
 
@@ -654,7 +696,7 @@ class MCMCAdapt:
         needs to be "else choose the number of modified states"
         '''
         allowable_modifications = []
-        for state in TS.states.values():
+        for state in all_states:#TS.states.values():
             if state not in modified_states:
                 if len(state.in_trans) <= self.mod_limit-num_mods:
                     allowable_modifications.append(state)
@@ -664,12 +706,15 @@ class MCMCAdapt:
         NOTE: what do we do when there are limited modifications that can be made??
         USE MOD LIMITED
         '''
-        #num_transition_mods = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
-        num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_empties,num_trans)>0 and self.mod_limit<=num_mods) else 0
+        #num_transition_mods = the number of transitions to play with is > 0 and there is mod room OR
+        #num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_nonempties,num_trans)>0 and self.mod_limit<=num_mods) else 0
+        num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or (num_nonempties > 0)) else 0
         #num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
-        num_transition_deletions = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_empties,num_trans)>0 and self.mod_limit<=num_mods) else 0
+        num_transition_deletions = 1 if ((num_trans>0 and self.mod_limit>num_mods) or (num_nonempties > 0)) else 0
+        num_transition_deletions = 0
         #num_transition_additions = len(removed_transitions) if num_mods < self.mod_limit else num_empties
         num_transition_additions = 1 if ((len(removed_transitions)>0 and self.mod_limit>num_mods) or (num_empties>0 and self.mod_limit<=num_mods)) else 0
+        num_transition_additiona = 0
 
         # num_state_additions = 1 if there's an added state whose input transitions we can modify OR if there exists a group of modifiable transitions whose size is less than the number of modifiable transitions
         allowable_new_state_trans_mods = []
@@ -681,7 +726,8 @@ class MCMCAdapt:
                 if len(state.in_trans) <= self.mod_limit-num_mods:
                     for trans in state.in_trans:
                         allowable_new_state_trans_mods.append(trans)
-        num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 and num_added_states <= self.num_state_limit else 0
+        num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 and num_added_states < self.num_state_limit else 0
+        #num_state_additions = 0
 
         # num_deletions = 1 if there is an added state where deleting it won't cause the number of mods to go over the limit
         # this is a list of states that we can actually dleete
@@ -702,6 +748,7 @@ class MCMCAdapt:
 
         # decide whether we can activate this transformation or not
         num_state_deletions = 1 if len(allowable_added_states_to_delete) > 0 else 0
+        #num_state_deletions = 0
         #num_state_deletions = 1 if num_added_states>0 else 0
 
         '''
@@ -768,6 +815,8 @@ class MCMCAdapt:
                 print("ERROR: modifying an existing state (1) resulted in more mods than allowed")
                 exit()
 
+            #self.update_mod_panel("state modification\nfrom {} to {}".format(old_micro["name"],state_name))
+
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
         elif selection == 2:  # modify existing transition
@@ -784,7 +833,7 @@ class MCMCAdapt:
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
 
             # randomly pick a target
-            target = random.choice(all_states)
+            target = random.choice(all_states_all)
             #print("modifying an existing transition from {} to {}->{}".format(transition.source.name, transition.target.name, target.name))
             old_target_id = transition.target_id
             old_target = transition.target
@@ -803,6 +852,9 @@ class MCMCAdapt:
             if self.mod_limit < mod_tracker.check_mod_tracker_sum():
                 print("ERROR: modifying an existing transition (2) resulted in more mods than allowed")
                 exit()
+
+            #print("   new transition: {}".format(str(transition)))
+            #self.update_mod_panel("transition modification\nfrom {} to (old) {} to (new) {}".format(transition.source.name,old_target.name, transition.target.name))
 
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
@@ -824,9 +876,9 @@ class MCMCAdapt:
             target.in_trans.remove(transition)
 
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
-            all_trans.remove(transition)
+            all_trans_all.remove(transition)
 
-            removed_transitions.append(transition)
+            removed_transitions_all.append(transition)
 
             # update the mod tracker
             mod_tracker.update_mod_tracker(transition, deleted=True)
@@ -845,8 +897,8 @@ class MCMCAdapt:
             else:
                 transition = random.choice(removed_transitions)
 
-            all_trans.append(transition)
-            removed_transitions.remove(transition)
+            all_trans_all.append(transition)
+            removed_transitions_all.remove(transition)
 
             source = transition.source
             source.out_trans.append(transition)
@@ -894,7 +946,7 @@ class MCMCAdapt:
             state = State(state_name, self.get_unused_state_id(TS), [micro])
             #print("  {}".format(state.id))
 
-            all_states.append(state)
+            all_states_all.append(state)
             TS.states[state_name] = state
             added_states.append(state)
 
@@ -914,7 +966,7 @@ class MCMCAdapt:
                 '''
                 transition.target = target_state
                 transition.target.in_trans.append(transition)
-                all_trans.append(transition)
+                all_trans_all.append(transition)
                 transitions.append(transition)
                 '''
                 THE FOLLOWING LINE WAS MODIFIED
@@ -965,6 +1017,8 @@ class MCMCAdapt:
                 print("ERROR: adding a state (5) resulted in more mods than allowed")
                 exit()
 
+            #self.update_mod_panel("state addition\nfrom {}".format(state.name))
+
             undoable = (5, (state, transitions, trans_to_modify, source_state, target_state))
         elif selection == 6:  # delete existing state
             #print("~CHOICE~: state deletion -- ")
@@ -978,16 +1032,16 @@ class MCMCAdapt:
 
             # remove any removed transitions from the removed_transitions list
             removed_to_delete = []
-            for trans in removed_transitions:
+            for trans in removed_transitions_all:
                 if trans.source == state:
                     removed_to_delete.append(trans)
             for trans in removed_to_delete:
-                removed_transitions.remove(trans)
+                removed_transitions_all.remove(trans)
 
             modified_linked = {}
             for trans in trans_toremove:
                 trans.target.in_trans.remove(trans)
-                all_trans.remove(trans)
+                all_trans_all.remove(trans)
 
                 #print(len(input_trans))
                 for inp_trans in input_trans:
@@ -1013,17 +1067,17 @@ class MCMCAdapt:
                     if inp_trans.condition == trans.condition:
                         found_link = True
                 if not found_link:
-                    all_trans.remove(inp_trans)
+                    all_trans_all.remove(inp_trans)
                     unlinked_to_delete.append(inp_trans)
                     inp_trans.source.out_trans.remove(inp_trans)
-                    removed_transitions.append(inp_trans)
+                    removed_transitions_all.append(inp_trans)
                     TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
 
             # remove from the transitions data structure
             del TS.transitions[state.id]
             del TS.states[state.name]
             added_states.remove(state)
-            all_states.remove(state)
+            all_states_all.remove(state)
 
             for st_old in TS.states:
                 del TS.transitions[TS.states[st_old].id][state.id]
@@ -1046,6 +1100,8 @@ class MCMCAdapt:
                 print(self.TS)
                 print(TS)
                 exit()
+
+            #self.update_mod_panel("state deletion\nfrom {}".format(state.name))
 
         #print(TS)
         return undoable
@@ -1305,22 +1361,37 @@ class MCMCAdapt:
 
         return perf_cost
 
-    def get_eq_cost(self, reward_vect):
+    def get_eq_cost(self, eq_vect):
         # count the number of correctness trajectories
+        # COMMENT OUT BELOW IF YOU WANT eq_cost TO BE OVER ALL TRAJECTORIES
+        '''
         num_correctness = 0
         for i in self.trajs:
             if i.is_correctness:
                 num_correctness+=1
         sum_cost = 0.0
-        for i in reward_vect:
+        for i in eq_vect:
             sum_cost += abs(i)
 
         eq_cost = sum_cost*1.0/num_correctness if num_correctness>0 else 0
         if eq_cost < 0:
             print("ERROR: eq cost cannot be less than 0")
         return eq_cost
+        '''
 
-    def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False):
+        # COMMENT OUT BELOW IF YOU WANT eq_cost TO BE OVER PROPERTIES
+        curr_violations = []
+        for traj in eq_vect:
+            prop_violations = traj.correctness_ids
+            for violation in prop_violations:
+                if violation not in curr_violations:
+                    curr_violations.append(violation)
+        #eq_cost = len(curr_violations)*1.0/self.num_properties
+        eq_cost = (10**len(curr_violations))-1
+        #print(eq_cost)
+        return eq_cost
+
+    def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False, counter=-1):
         traj_vect = []
         #print(rawinput)
         #print(output_mapping)
@@ -1336,12 +1407,12 @@ class MCMCAdapt:
                 print(item)
                 exit(1)
 
-        trajectory_to_return = Trajectory(traj_vect, reward, is_prefix, is_correctness=True)
+        trajectory_to_return = Trajectory(traj_vect, reward, is_prefix, is_correctness=True, correctness_id=counter)
         #print(trajectory_to_return)
 
         return trajectory_to_return
 
-    def build_trajectory_from_nusmv(self, counterexample, TS, printer=False):
+    def build_trajectory_from_nusmv(self, counterexample, TS, printer=False, counter=-1):
         if printer:
             print(counterexample)
         end_flag = False
@@ -1358,6 +1429,6 @@ class MCMCAdapt:
             is_prefix = False
         else:
             is_prefix=True
-        trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=is_prefix, is_correctness=True)
+        trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=is_prefix, is_correctness=True, correctness_id=counter)
         #print(trajectory_to_return)
         return trajectory_to_return
