@@ -356,7 +356,7 @@ class MCMCAdapt:
             #precost = self.get_cost(reward_vect, distance)
             perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max, num_non_correctness_trajs)
             new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs, prop_tracker)
-            eq_cost = self.get_eq_cost(new_eq_vect)
+            eq_cost,_ = self.get_eq_cost(new_eq_vect)
             #eq_cost = self.get_eq_cost(unweighted_eq_vect)
             #print("{} - {}".format(perf_cost, eq_cost))
             precost = perf_cost + eq_cost
@@ -464,7 +464,7 @@ class MCMCAdapt:
                 #postcost = self.get_cost(new_reward_vect,distance)
                 perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, num_non_correctness_trajs)
                 #print(unweighted_eq_vect)
-                eq_cost = self.get_eq_cost(unweighted_eq_vect)
+                eq_cost,passed_mc_thresh = self.get_eq_cost(unweighted_eq_vect)
 
                 '''
                 if new_distance == 0:
@@ -479,7 +479,7 @@ class MCMCAdapt:
                     #print("running the model checker {}".format(i))
                     prop_tracker.append([i])
                     new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs, prop_tracker)
-                    eq_cost = self.get_eq_cost(new_eq_vect)
+                    eq_cost,passed_mc_thresh = self.get_eq_cost(new_eq_vect)
                     #if eq_cost == 0:
                         #print("found correct interaction")
                     #print("new eq_cost: {}".format(eq_cost))
@@ -489,6 +489,14 @@ class MCMCAdapt:
                     #print("am not running the model checker")
                     models_unchecked += 1
                     #exit()
+
+                ###### DO NOT CONTINUE IF SAMPLED PAST THE ALLOWABLE PROP. VIOLATION THRESHOLD
+                '''
+                if passed_mc_thresh:
+                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
+                    print("gone past MCMC threshold {}".format(i))
+                    continue
+                '''
 
                 #print("{} - {}".format(perf_cost, eq_cost))
 
@@ -501,6 +509,7 @@ class MCMCAdapt:
                 #print(alpha)
                 #print("~~~~~")
                 u = np.random.random()
+                #print("{} >< {} ---> {}".format(alpha,u,u>alpha))
 
                 # accept or reject
                 if u > alpha and self.algorithm=="mcmc":
@@ -746,7 +755,7 @@ class MCMCAdapt:
                     for trans in state.in_trans:
                         allowable_new_state_trans_mods.append(trans)
         num_state_additions = 1 if len(allowable_new_state_trans_mods)>0 and num_added_states < self.num_state_limit else 0
-        #num_state_additions = 0
+        num_state_additions = 0
 
         # num_deletions = 1 if there is an added state where deleting it won't cause the number of mods to go over the limit
         # this is a list of states that we can actually dleete
@@ -767,7 +776,7 @@ class MCMCAdapt:
 
         # decide whether we can activate this transformation or not
         num_state_deletions = 1 if len(allowable_added_states_to_delete) > 0 else 0
-        #num_state_deletions = 0
+        num_state_deletions = 0
         #num_state_deletions = 1 if num_added_states>0 else 0
 
         '''
@@ -835,6 +844,7 @@ class MCMCAdapt:
                 exit()
 
             #self.update_mod_panel("state modification\nfrom {} to {}".format(old_micro["name"],state_name))
+            #print("state modification from {} to {}".format(old_micro["name"],state_name))
 
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
@@ -853,7 +863,7 @@ class MCMCAdapt:
 
             # randomly pick a target
             target = random.choice(all_states_all)
-            #print("modifying an existing transition from {} to {}->{}".format(transition.source.name, transition.target.name, target.name))
+            #print("modifying an existing transition from {}->{}->{} to {}->{}->{}".format(transition.source.name, transition.condition, transition.target.name, transition.source.name, transition.condition, target.name))
             old_target_id = transition.target_id
             old_target = transition.target
 
@@ -1406,9 +1416,15 @@ class MCMCAdapt:
                 if violation not in curr_violations:
                     curr_violations.append(violation)
         #eq_cost = len(curr_violations)*1.0/self.num_properties
-        eq_cost = (10**len(curr_violations))-1
+        eq_cost = (8**len(curr_violations))-1
         #print(eq_cost)
-        return eq_cost
+
+        # adding a flag for if a certain threshold is reached
+        #print(curr_violations)
+        if len(curr_violations)*1.0/self.num_properties >= 0.3:
+            return eq_cost,True
+        else:
+            return eq_cost,False
 
     def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False, counter=-1):
         traj_vect = []

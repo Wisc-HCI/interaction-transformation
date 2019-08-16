@@ -19,24 +19,24 @@ SPEC AG !(st=ERROR)
 ---------------------
 
 -- after asking about an unsatisfiable request, the next state must ALWAYS refer the human to the desk
-SPEC AG ((~hst=\UnsatRequest\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> AX ~st=\ReferToDesk\~)
+SPEC AG ((~hst=\UnsatRequest\~ & !(~st=\Farewell\~) & ~st!=\END\~ & ~st!=\ERROR\~) -> AX ~st=\ReferToDesk\~)
 
 -- if the human says goodbye, it's hasta manana
-SPEC AG ((~hst=\Goodbye\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> AX ~st=\Farewell\~)
+SPEC AG ((~hst=\Goodbye\~ & !(~st=\Farewell\~) & ~st!=\END\~ & ~st!=\ERROR\~) -> AX ~st=\Farewell\~)
 
 ---------------------
 -- the restricting
 ---------------------
 
 -- do not answer a question or say DidYouSay unless a question has been asked
-SPEC A [ (~st!=\AnswerQuestion\~ & ~st!=\DidYouSay\~) U ((~hst=\RequestInfo\~ & !(~st=\AnswerQuestion\~ | ~st=\DidYouSay\~)) | ~st=\Farewell\~)]
+SPEC A [ (!(~st=\AnswerQuestion\~) & !(~st=\DidYouSay\~)) U ((~hst=\RequestInfo\~ & !(~st=\AnswerQuestion\~ | ~st=\DidYouSay\~)) | ~st=\Farewell\~)]
 
 -- if a didyousay occurs (not during the end of the interaction) and the human affirms it,
 -- then at some point in the future the robot MUST answer the query
 SPEC AG ((~hst=\Affirm\~ & ~st=\DidYouSay\~) -> AX ~st=\AnswerQuestion\~)
 
 -- if a request for info occurs, then EITHER a didyousay OR an answer question MUST occur in the future
-SPEC AG ((~hst=\RequestInfo\~ & ~st!=\Farewell\~ & ~st!=\END\~ & ~st!=\ERROR\~) -> AX (~st=\AnswerQuestion\~ | ~st=\DidYouSay\~))
+SPEC AG ((~hst=\RequestInfo\~ & !(~st=\Farewell\~) & ~st!=\END\~ & ~st!=\ERROR\~) -> AX (~st=\AnswerQuestion\~ | ~st=\DidYouSay\~))
 
 -----------------------------------------------------
 
