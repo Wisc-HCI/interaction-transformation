@@ -1416,7 +1416,7 @@ class MCMCAdapt:
                 if violation not in curr_violations:
                     curr_violations.append(violation)
         #eq_cost = len(curr_violations)*1.0/self.num_properties
-        eq_cost = (8**len(curr_violations))-1
+        eq_cost = (9**len(curr_violations))-1
         #print(eq_cost)
 
         # adding a flag for if a certain threshold is reached
