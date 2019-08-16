@@ -53,6 +53,7 @@ class App(QMainWindow):
         # show the UI
         self.resized.connect(self.resizeWindow)
         self.initUI()
+        self.compute_inclusion()
         self.show()
         '''
 
@@ -198,20 +199,41 @@ class App(QMainWindow):
 
         counter = 0
         for trajectory in traces:
+            rew = traces[trajectory][0]
+            rew_color = abs(max(-1,min(1,rew)))
             color = QColor(0, 0, 0, 0)
-            if traces[trajectory] < 0:
-                color = QColor(255,85,50,180)
-            elif traces[trajectory] > 0:
-                color = QColor(57,255,20,180)
+            if rew < 0:
+                color = QColor(255,85,50,180*rew_color)
+            elif rew > 0:
+                color = QColor(57,255,20,180*rew_color)
 
-            item = QListWidgetItem("{0:<0}. {1:<200}".format("trajectory {} {}".format(counter, "(correctness)" if trajectory.is_correctness else ""), traces[trajectory]))
+            traj_label = ""
+            if trajectory.is_correctness:
+                if trajectory.is_prefix:
+                    traj_label = "corr. prefix"
+                else:
+                    traj_label = " correctness"
+            else:
+                if trajectory.is_prefix:
+                    traj_label = "natur. prefix"
+                if trajectory.is_generated_prefix:
+                    traj_label = "gener. prefix"
+                else:
+                    traj_label = " full traject"
+
+            item = QListWidgetItem("{0:<0}. {1:<200}".format("{} {}".format(traj_label, counter), traces[trajectory][0]))
             item.setToolTip(str(trajectory))
-            if traces[trajectory] == 0:
+            if traces[trajectory][1] == False:
                 item.setForeground(QColor(0,0,0,100))
-            item.setBackground(QColor(color))
+                item.setBackground(QColor(200,200,200))
+            else:
+                item.setBackground(QColor(color))
 
             counter += 1
             self.trace_list.addItem(item)
+
+    def compute_inclusion(self):
+        self.adapter.compute_inclusion(self.update_trace_panel, self.set_mod_text)
 
     def mcmc_adapt(self):
         self.adapter.mcmc_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel, self.set_mod_text)

@@ -106,8 +106,7 @@ class Controller:
         exit()
         '''
 
-
-
+        self.generate_prefixes(self.consolidated_trajs)
 
         # add default microinteractions not already in micro_selection
         for micro in self.outputs.alphabet:
@@ -127,6 +126,10 @@ class Controller:
 
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
+    def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
+        self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
+        self.mcmc.compute_inclusion(    )
+
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, update_mod_panel, algorithm="mcmc"):
 
         plot_data = { "rewards": [],
@@ -145,8 +148,7 @@ class Controller:
         exporter = TSExporter(self.TS, self.json_data)
         exporter.export("result_files")
         self.log.open()
-        mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
-        self.TS, st_reachables, correctness_trajs, mod_tracker = mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
+        self.TS, st_reachables, correctness_trajs, mod_tracker = self.mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
@@ -219,6 +221,60 @@ class Controller:
     def offset_rewards(self, baseline):
         for traj in self.trajs:
             traj.reward -= baseline
+
+    def generate_prefixes(self, consolidated_trajectories):
+        '''
+        precondition is that consolidated trajectories exist
+        '''
+
+        # create a prefix dict
+        # format is dict[traj_comparable_string] = (traj, [score1, score2, ... score_n])
+        generated_prefix_dict = {}
+
+        # loop through the trajectories
+        for traj in self.consolidated_trajs:
+            tvect = traj.vect
+
+            # loop through each step of the vect
+            prefix_vect = []
+            step_idx = 0
+            tvect_len = len(tvect)
+            while step_idx < len(tvect)-1:  # generate a prefix, not the whole trajectory
+                step = tvect[step_idx]
+                prefix_vect.append(step)
+
+                # copy the prefix vect
+                pvect_copy = [(pair[0].copy(),pair[1].copy()) for pair in prefix_vect]
+
+                # generate a new trajectory
+                new_prefix = Trajectory(pvect_copy,traj.reward,is_prefix=True,is_correctness=False,correctness_id=-1,is_generated_prefix=True)
+
+                # test whether the prefix already exists in the dataset
+                pref_string = new_prefix.comparable_string()
+                already_exists = False
+                for existing_traj in consolidated_trajectories:
+                    if pref_string == existing_traj.comparable_string():
+                        already_exists = True
+                        break
+                if already_exists:
+                    step_idx += 1
+                    continue
+
+                # test whether it exists within our dict
+                if pref_string not in generated_prefix_dict:
+                    generated_prefix_dict[pref_string] = (new_prefix, [new_prefix.reward])
+                else:
+                    generated_prefix_dict[pref_string][1].append(new_prefix.reward)
+
+                step_idx += 1
+
+        # create the final list of prefixes
+        for pref_string, pref_tup in generated_prefix_dict.items():
+            print("{} - {}".format(str(pref_tup[0]),pref_tup[1]))
+            prefix = pref_tup[0]
+            reward = sum(pref_tup[1])*1.0/len(pref_tup[1])
+            prefix.reward = reward
+            consolidated_trajectories.append(prefix)
 
     def consolidate_trajectories(self):
         #print("RAW TRAJS")

@@ -61,6 +61,25 @@ class MCMCAdapt:
         print(self.mod_limit)
         print(self.num_state_limit)
 
+    def compute_inclusion(self):
+        # create the lists to keep track of added states and removed transitions
+        removed_transitions = []
+        for _,state in self.TS.states.items():
+            for inp in self.inputs.alphabet:
+                inp_exists = False
+                for trans in state.out_trans:
+                    if trans.condition == inp:
+                        inp_exists = True
+                if not inp_exists:
+                    new_trans = Transition(state.id, state.id, inp)
+                    new_trans.source = state
+                    new_trans.target = state
+                    removed_transitions.append(new_trans)
+        path_traversal = PathTraversal(self.TS, self.trajs, self.freqs, removed_transitions)
+        traj_status = {}
+        path_traversal.check([],[], traj_status)
+        self.update_trace_panel(traj_status)
+
     def localize_faults(self):
 
         state_fault_severity = {}
@@ -358,7 +377,7 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             #start_time = time.time()
-            total_itr = 1000
+            total_itr = 10000
             best_distance = distance
             while i < total_itr:
 

@@ -78,6 +78,6 @@
                     "Goodbye": ["goodbye"],
                     "General": ["general_hello"],
                     "Ignore": ["Ignore"]},
- "mod_percent": 0.05,
+ "mod_percent": 0.3,
  "good_thresh": 0.0,
  "time_mcmc": 500000}

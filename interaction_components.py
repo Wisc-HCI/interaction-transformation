@@ -57,10 +57,13 @@ class Frequencies:
 
 class Trajectory:
 
-    def __init__(self, vect, reward, is_prefix, is_correctness=False, correctness_id=-1):
+    def __init__(self, vect, reward, is_prefix, is_correctness=False, correctness_id=-1, is_generated_prefix=False):
         self.vect = vect
         self.reward = reward
+
         self.is_prefix = is_prefix
+        self.is_generated_prefix = is_generated_prefix
+
         self.is_correctness = is_correctness
         self.correctness_ids = [correctness_id]
 

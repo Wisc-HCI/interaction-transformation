@@ -28,7 +28,7 @@ class PathTraversal:
             if vect[0][1].type != self.TS.init.micros[0]["name"]:
                 #print("unsat -- init")
                 sat = False
-                trajectory_status[traj] = 0
+                trajectory_status[traj] = (traj.reward,False)
                 continue
 
             curr_st = self.TS.init
@@ -43,7 +43,7 @@ class PathTraversal:
                     curr_st = cond_dict[curr_st][inp][1]
                 else:
                     sat = False
-                    trajectory_status[traj] = 0
+                    trajectory_status[traj] = (traj.reward,False)
                     break
 
 
@@ -76,18 +76,18 @@ class PathTraversal:
                         can_end = True
                 if not can_end:
                     sat = False
-                    trajectory_status[traj] = 0
+                    trajectory_status[traj] = (traj.reward,False)
 
             if sat:
                 #print("sat")
-                trajectory_status[traj] = traj.reward
+                trajectory_status[traj] = (traj.reward,True)
                 if traj.is_correctness:
                     eqs.append(traj)
                 else:
                     sats.append(traj.reward)
 
         #if len(eqs) == 0:
-        #    print("no correctness trajectories exist within the interaction")    
+        #    print("no correctness trajectories exist within the interaction")
 
         #exit(0)
         #return sats, probs, trajectory_status
