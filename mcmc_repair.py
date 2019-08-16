@@ -377,7 +377,7 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             #start_time = time.time()
-            total_itr = 10000
+            total_itr = 5000000
             best_distance = distance
             while i < total_itr:
 
