@@ -61,6 +61,149 @@ class MCMCAdapt:
         print(self.mod_limit)
         print(self.num_state_limit)
 
+    def get_correct_mutations(self, num_additions, num_deletions):
+
+        '''
+        Precondition: self.TS must itself be correct
+        '''
+        # check that TS is actually correct
+        mod_tracker = ModificationTracker()
+        property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
+        Properties = property_module.Properties
+        property_checker = Properties(self.inputs, self.outputs)
+        TS, all_original_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
+        new_eq_vect = self.model_check(TS, removed_transitions, property_checker, [], [[]], append_correctness_traj=False)
+        eq_cost,_ = self.get_eq_cost(new_eq_vect)
+        if eq_cost != 0:
+            print("ERROR: starting interaction is not correct")
+            exit()
+
+        num_non_correctness_trajs, abs_min, abs_max = self.calculate_abs_min_max()
+
+        # determine which states to insert into the interaction
+        # first priority -- states that have been seen in positive trajectories
+        # but don't currently exist in the interaction
+        existing_state_names = [st.micros[0]["name"] for st_name,st in self.TS.states.items()]
+        state2scores = {} # format = state_scores[state] = [score,score...score]
+        state2avescore = {} # format = dict[state] = [ave score]
+
+        existing_state2scores = {} # format = state_scores[state] = [score,score...score]
+        existing_state2avescore = {} # format = dict[state] = [ave score]
+        for traj in self.trajs:
+            if traj.reward >0 and not traj.is_generated_prefix:
+                for item in traj.vect:
+                    micro_name = item[1].type
+                    if micro_name not in existing_state_names:
+                        if micro_name not in state2scores:
+                            state2scores[micro_name] = [traj.reward]
+                        else:
+                            state2scores[micro_name].append(traj.reward)
+                    else:
+                        if micro_name not in existing_state2scores:
+                            existing_state2scores[micro_name] = [traj.reward]
+                        else:
+                            existing_state2scores[micro_name].append(traj.reward)
+
+            for state,arr in state2scores.items():
+                state2avescore[state] = sum(arr)*1.0/len(arr)
+            for state,arr in existing_state2scores.items():
+                existing_state2avescore[state] = sum(arr)*1.0/len(arr)
+
+        def decide_on_states_to_add(additions_left, score_dict):
+            state2add = []
+            for state in score_dict:
+                if len(state2add) < additions_left:  # if there is still room to add
+                    state2add.append(state)
+                else:
+                    state_score = score_dict[state]
+                    min_added_score = 1000
+                    min_added_state = None
+                    for added_state in state2add:
+                        if score_dict[added_state] < min_added_score:
+                            min_added_score = score_dict[added_state]
+                            min_added_state = added_state
+                    if min_added_score < state_score:
+                        state2add.remove(added_state)
+                        state2add.append(state)
+            return state2add
+
+        nonexisting_states2add = decide_on_states_to_add(num_additions,state2avescore)
+        existing_states2add = decide_on_states_to_add(num_additions - len(nonexisting_states2add),existing_state2avescore)
+        states2add = nonexisting_states2add + existing_states2add
+
+        # check that each state in states2add (existing + not) is unique
+        unique_states_2_add = []
+        for state in states2add:
+            if state not in unique_states_2_add:
+                unique_states_2_add.append(state)
+            else:
+                print("ERROR: attempting to add duplicate states")
+                exit()
+        # check that number of states equals the num_additions variable
+        if len(states2add) != num_additions:
+            print("ERROR: the number of states to add does not equal the expected number of additions")
+            exit()
+
+        def append_cost_and_TS(new_TS, removed_transitions, property_checker, correct_mods):
+            new_eq_vect = self.model_check(new_TS, removed_transitions, property_checker, [], [[]], append_correctness_traj=False)
+            eq_cost,_ = self.get_eq_cost(new_eq_vect)
+
+            if eq_cost == 0:
+                path_traversal = PathTraversal(new_TS, self.trajs, self.freqs, removed_transitions)
+                unweighted_rew_vect = []
+                path_traversal.check(unweighted_rew_vect, [], {})
+                perf_cost = self.get_perf_cost(unweighted_rew_vect, abs_min, abs_max, num_non_correctness_trajs)
+                if perf_cost not in correct_mods:
+                    correct_mods[perf_cost] = [new_TS]
+                else:
+                    correct_mods[perf_cost].append(new_TS)
+
+        # get the additions
+        accepted_additions = []
+        for state_name in states2add:
+            correct_additions = {}
+            for trans_template in all_original_trans:
+                TS,all_trans, all_states, added_states,_,removed_transitions = self.reset_TS(mod_tracker)
+                available_trans = TS.transitions[trans_template.source.id][trans_template.target_id]
+                for avail_tran in available_trans:
+                    if trans_template.condition == avail_tran.condition:
+                        trans = avail_tran
+                self.add_state(TS, {"name": state_name}, trans, all_states, all_trans, added_states, mod_tracker, 0)
+                append_cost_and_TS(TS,removed_transitions,property_checker,correct_additions)
+            print(correct_additions)
+            best_addition = None
+            score_values = sorted(list(correct_additions.keys()))
+            TS_list = correct_additions[score_values[0]]
+            accepted_TS = TS_list[0]
+            accepted_additions.append(accepted_TS)
+
+        # get the deletions
+        correct_deletions = {}  # format = dict[score] = TS
+        for state_name in self.TS.states:
+            if TS.init.name == state_name:
+                continue
+            TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
+            state = TS.states[state_name]
+            self.delete_state(TS, state, removed_transitions, all_trans, all_states)
+            append_cost_and_TS(TS,removed_transitions,property_checker,correct_deletions)
+
+        accepted_deletions = []
+        score_values = sorted(list(correct_deletions.keys()))
+        counter = 0
+        for score in score_values:
+            TS_list = correct_deletions[score]
+            reached_amount = False
+            for tsys in TS_list:
+                accepted_deletions.append(tsys)
+                counter += 1
+                if counter >= num_deletions:
+                    reached_amount = True
+                    break
+            if reached_amount:
+                break
+
+        return accepted_additions, accepted_deletions
+
     def compute_inclusion(self):
         # create the lists to keep track of added states and removed transitions
         removed_transitions = []
@@ -239,6 +382,25 @@ class MCMCAdapt:
 
         return TS, all_trans, all_states, added_states, modified_states, removed_transitions
 
+    def calculate_abs_min_max(self):
+        '''
+        calculate the absolute max and the absolute min for this set of trajectories
+        '''
+        R_neg = 0.0
+        R_pos = 0.0
+        num_non_correctness_trajs = len(self.trajs)
+        for traj in self.trajs:
+            i = traj.reward
+            if i < 0:
+                R_neg += abs(i)
+            elif i > 0:
+                R_pos += abs(i)
+
+        abs_min = (num_non_correctness_trajs-R_pos)*1.0/(2*num_non_correctness_trajs)
+        abs_max = (num_non_correctness_trajs+R_neg)*1.0/(2*num_non_correctness_trajs)
+
+        return num_non_correctness_trajs, abs_min, abs_max
+
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
         start_time = time.time()
 
@@ -360,6 +522,9 @@ class MCMCAdapt:
             #eq_cost = self.get_eq_cost(unweighted_eq_vect)
             #print("{} - {}".format(perf_cost, eq_cost))
             precost = perf_cost + eq_cost
+
+            self.log.write("at start, eq cost is {}, perf cost is {}".format(eq_cost, perf_cost))
+            self.log.write("at start, reward is {}".format(total_reward))
 
             accept_counter = 0
             reject_counter = 0
@@ -534,6 +699,8 @@ class MCMCAdapt:
                         #best_design[1] = [trans for trans in removed_transitions]
                         print("found new interaction")
                         self.log.write("found new interaction at {}".format(i))
+                        self.log.write("eq cost is {}, perf cost is {}".format(eq_cost, perf_cost))
+                        self.log.write("reward is {}".format(total_reward))
                         best_design[1] = [best_design[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in removed_transitions]
                         best_design[2] = total_reward
                         best_design[3] = traj_status
@@ -617,7 +784,7 @@ class MCMCAdapt:
 
         return best_design[0], st_reachable, correctness_trajs, best_mod_tracker
 
-    def model_check(self, TS, removed_transitions, property_checker, correctness_trajs, prop_tracker):
+    def model_check(self, TS, removed_transitions, property_checker, correctness_trajs, prop_tracker, append_correctness_traj=True):
         new_eq_vect = []
         '''
         PyNuSMV and KOSA MODEL CHECKERS
@@ -643,7 +810,8 @@ class MCMCAdapt:
                 traj = self.build_trajectory(counterexample[0], TS.states, -1, counterexample[2], is_prefix=counterexample[1], counter=0)
                 # UNCOMMENT IF WE WANT TO REMOVE LOOPS FROM THE COUNTEREXAMPLE
                 #traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
-                self.trajs.append(traj)
+                if append_correctness_traj:
+                    self.trajs.append(traj)
                 correctness_trajs.append(traj)
                 new_eq_vect.append(-1)
             #counter += 1
@@ -677,7 +845,8 @@ class MCMCAdapt:
                         print(other_traj)
                         exit()
 
-                self.trajs.append(traj)
+                if append_correctness_traj:
+                    self.trajs.append(traj)
                 correctness_trajs.append(traj)
                 new_eq_vect.append(traj)
             counter += 1
@@ -1105,12 +1274,12 @@ class MCMCAdapt:
             # remove from the transitions data structure
             del TS.transitions[state.id]
             del TS.states[state.name]
-            added_states.remove(state)
             all_states_all.remove(state)
 
             for st_old in TS.states:
                 del TS.transitions[TS.states[st_old].id][state.id]
 
+            added_states.remove(state)
             undoable = (6, (state, removed_to_delete, modified_linked, unlinked_to_delete, trans_toremove))
 
             # update the mod tracker
@@ -1134,6 +1303,144 @@ class MCMCAdapt:
 
         #print(TS)
         return undoable
+
+    def add_state(self, TS, micro, trans, all_states_all, all_trans_all, added_states, mod_tracker, num_mods):
+        source_state = trans.source
+        target_state = trans.target
+        other_target_states = {}
+        for other_trans in source_state.out_trans:
+            other_target_states[other_trans.condition] = other_trans.target
+        trans_to_modify = [trans]
+
+        # determine if another transition between the selected states exists
+        for other_trans in source_state.out_trans:
+            if other_trans != trans:
+                if other_trans.target == target_state and (self.mod_limit-num_mods)-len(trans_to_modify)>0:
+                    trans_to_modify.append(other_trans)
+
+        # come up with the new state
+        state_name = self.get_unused_name(micro["name"], TS)
+        state = State(state_name, self.get_unused_state_id(TS), [micro])
+
+        all_states_all.append(state)
+        TS.states[state_name] = state
+        added_states.append(state)
+
+        # add to transitions
+        TS.transitions[state.id] = {}
+        for st_old in TS.states:
+            TS.transitions[str(state.id)][str(TS.states[st_old].id)] = []
+            TS.transitions[str(TS.states[st_old].id)][str(state.id)] = []
+
+        transitions = []
+        for inp in self.inputs.alphabet:
+            transition = Transition(state.id, other_target_states[inp], inp)
+            transition.source = state
+            transition.source.out_trans.append(transition)
+            '''
+            THE FOLLOWING LINE IS AN ADDITION
+            '''
+            transition.target = other_target_states[inp]
+            transition.target.in_trans.append(transition)
+            all_trans_all.append(transition)
+            transitions.append(transition)
+            '''
+            THE FOLLOWING LINE WAS MODIFIED
+            '''
+            TS.transitions[str(state.id)][str(other_target_states[inp].id)].append(transition)
+
+        '''
+        NOW WE MUST REMOVE THE OLD INPUT TRANSITIONS FROM THE TARGET STATE
+        '''
+        for trans in trans_to_modify:
+            target_state.in_trans.remove(trans)
+
+        '''
+        NOW WE MUST CHANGE THE TARGET STATE OF THE INPUT TRANS
+        '''
+        for trans in trans_to_modify:
+            trans.target = state
+            trans.target_id = state.id
+
+        '''
+        NOW WE MUST MODIFY THE TRANS_TO_MODIFY
+        '''
+        for trans in trans_to_modify:
+            mod_tracker.update_mod_tracker(trans)
+
+        '''
+        NOW WE MUST SET THE IN and OUT TRANS LISTS OF THE NEW STATE
+        '''
+        for trans in trans_to_modify:
+            state.in_trans.append(trans)
+        #for trans in transitions:
+        #    state.out_trans.append(trans)
+
+        '''
+        NOW WE MUST MODIFY THE TRANSITIONS DATASTRUCTURE TO REFLECT THE CHANGES
+        '''
+        # remove the transitions from the old
+        for trans in trans_to_modify:
+            TS.transitions[str(source_state.id)][str(target_state.id)].remove(trans)
+
+        # add the transitons to the new
+        for trans in trans_to_modify:
+            TS.transitions[str(source_state.id)][str(state.id)].append(trans)
+
+    def delete_state(self, TS, state, removed_transitions_all, all_trans_all, all_states_all):
+        trans_toremove = state.out_trans
+        input_trans = state.in_trans
+
+        # remove any removed transitions from the removed_transitions list
+        removed_to_delete = []
+        for trans in removed_transitions_all:
+            if trans.source == state:
+                removed_to_delete.append(trans)
+        for trans in removed_to_delete:
+            removed_transitions_all.remove(trans)
+
+        modified_linked = {}
+        for trans in trans_toremove:
+            trans.target.in_trans.remove(trans)
+            all_trans_all.remove(trans)
+
+            #print(len(input_trans))
+            for inp_trans in input_trans:
+                if inp_trans.condition == trans.condition:
+                    modified_linked[inp_trans] = inp_trans.target
+
+                    TS.transitions[str(inp_trans.source.id)][str(inp_trans.target.id)].remove(inp_trans)
+                    if trans.target == state:
+                        inp_trans.target = inp_trans.source
+                        inp_trans.target_id = inp_trans.source_id
+                        inp_trans.source.in_trans.append(inp_trans)
+                    else:
+                        inp_trans.target = trans.target
+                        inp_trans.target_id = trans.target_id
+                        trans.target.in_trans.append(inp_trans)
+                    TS.transitions[inp_trans.source.id][inp_trans.target.id].append(inp_trans)
+
+        # take care of any unlinked transitions
+        unlinked_to_delete = []
+        for inp_trans in input_trans:
+            found_link = False
+            for trans in trans_toremove:
+                if inp_trans.condition == trans.condition:
+                    found_link = True
+            if not found_link:
+                all_trans_all.remove(inp_trans)
+                unlinked_to_delete.append(inp_trans)
+                inp_trans.source.out_trans.remove(inp_trans)
+                removed_transitions_all.append(inp_trans)
+                TS.transitions[inp_trans.source.id][inp_trans.target.id].remove(inp_trans)
+
+        # remove from the transitions data structure
+        del TS.transitions[state.id]
+        del TS.states[state.name]
+        all_states_all.remove(state)
+
+        for st_old in TS.states:
+            del TS.transitions[TS.states[st_old].id][state.id]
 
     def undo_modification(self, undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
 

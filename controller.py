@@ -74,7 +74,7 @@ class Controller:
         # remove final human/robot actions from prefixes
         print("CONTROLLER >> finding baseline")
         baseline = self.find_baseline(original_interaction_trajs)
-        #baseline = 0.0
+        #baseline = 0.1
         print("CONTROLLER >> baseline set to {}".format(baseline))
         print("CONTROLLER >> offsetting rewards based on baseline")
         self.offset_rewards(baseline)
@@ -126,9 +126,18 @@ class Controller:
 
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
+    def compute_correctness_TS(self):
+        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(2,1)
+
+        for i in range(len(accepted_deletions)):
+            # export the interaction
+            deletion = accepted_deletions[i]
+            exporter = TSExporter(deletion, self.json_data)
+            exporter.export("result_files", mod_tracker=None, ts_name="deletion{}.xml".format(i))
+
     def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
         self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
-        self.mcmc.compute_inclusion(    )
+        self.mcmc.compute_inclusion()
 
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, update_mod_panel, algorithm="mcmc"):
 
@@ -232,7 +241,7 @@ class Controller:
         generated_prefix_dict = {}
 
         # loop through the trajectories
-        for traj in self.consolidated_trajs:
+        for traj in consolidated_trajectories:
             tvect = traj.vect
 
             # loop through each step of the vect
@@ -240,6 +249,10 @@ class Controller:
             step_idx = 0
             tvect_len = len(tvect)
             while step_idx < len(tvect)-1:  # generate a prefix, not the whole trajectory
+
+                # calculate the weight
+                step_weight = (step_idx+1)/len(tvect)   # weights linearly increase
+
                 step = tvect[step_idx]
                 prefix_vect.append(step)
 
@@ -256,25 +269,64 @@ class Controller:
                     if pref_string == existing_traj.comparable_string():
                         already_exists = True
                         break
+                '''
+                # COMMENT IN IF YOU DON"T WANT TO AFFECT USER RATINGS
+                # OF USER-SEEN PREFIXES
                 if already_exists:
                     step_idx += 1
                     continue
+                '''
 
                 # test whether it exists within our dict
                 if pref_string not in generated_prefix_dict:
-                    generated_prefix_dict[pref_string] = (new_prefix, [new_prefix.reward])
+                    generated_prefix_dict[pref_string] = (new_prefix, [(new_prefix.reward, step_weight)])
                 else:
-                    generated_prefix_dict[pref_string][1].append(new_prefix.reward)
+                    generated_prefix_dict[pref_string][1].append((new_prefix.reward, step_weight))
 
                 step_idx += 1
 
+        # add the existing, user-rated prefixes to the list
+        found_existing_prefs = []
+        for traj in consolidated_trajectories:
+            if traj.is_prefix:
+                if traj.comparable_string() in generated_prefix_dict:
+                    generated_prefix_dict[traj.comparable_string()][1].append((traj.reward,1.0))
+                    found_existing_prefs.append(traj.comparable_string())
+        for genpref in generated_prefix_dict:
+            if genpref not in found_existing_prefs:
+                generated_prefix_dict[genpref][1].append((0.0,1.0))
+
         # create the final list of prefixes
         for pref_string, pref_tup in generated_prefix_dict.items():
-            print("{} - {}".format(str(pref_tup[0]),pref_tup[1]))
-            prefix = pref_tup[0]
-            reward = sum(pref_tup[1])*1.0/len(pref_tup[1])
-            prefix.reward = reward
-            consolidated_trajectories.append(prefix)
+
+            # first calculate weighted average
+            rewards = pref_tup[1]
+            reward_vect = []
+            weight_vect = []
+            for r in rewards:
+                reward_vect.append(r[0])
+                weight_vect.append(r[1])
+            print(pref_string)
+            print(reward_vect)
+            print(weight_vect)
+            overall_reward = np.average(reward_vect,weights=weight_vect)
+
+            # then determine whether the prefix already exists, in which we replace the
+            # prefix's reward with the calculated reward
+            is_existing_prefix = False
+            for traj in consolidated_trajectories:
+                if traj.is_prefix:
+                    if traj.comparable_string() == pref_string:
+                        is_existing_prefix = True
+                        traj.reward = overall_reward
+
+            if not is_existing_prefix:
+                print("{} - {}".format(str(pref_tup[0]),pref_tup[1]))
+                prefix = pref_tup[0]
+                #reward = sum(pref_tup[1])*1.0/len(pref_tup[1])
+                #prefix.reward = reward
+                prefix.reward = overall_reward
+                consolidated_trajectories.append(prefix)
 
     def consolidate_trajectories(self):
         #print("RAW TRAJS")

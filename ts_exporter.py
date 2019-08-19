@@ -6,7 +6,7 @@ class TSExporter:
         self.TS = TS
         self.io_data = io_data
 
-    def export(self, path, mod_tracker=None):
+    def export(self, path, mod_tracker=None, ts_name="updated_interaction.xml"):
 
         # make the states
         st2id = {}
@@ -59,10 +59,10 @@ class TSExporter:
                         condition = trans.condition
                         condition = "human_" + condition[0].lower() + condition[1:]
 
-                        cond_el = ET.SubElement(transition,'condition')
-                        cond_el.set('guard',condition)
+                        cond_el = ET.SubElement(transition,'guard')
+                        cond_el.set('condition',condition)
         # export the file
-        tree.write(open("{}/updated_interaction.xml".format(path),"w"),encoding="unicode")
+        tree.write(open("{}/{}".format(path,ts_name),"w"),encoding="unicode")
 
         if mod_tracker is not None:
             mod_tracker.write_to_file(path)

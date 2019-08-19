@@ -134,6 +134,12 @@ class App(QMainWindow):
                                      .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(200, 0, 150);}""")
         self.traj_build_button.clicked.connect(self.init_traj_builder)
 
+        # compute correctness mutations button
+        self.corr_button = QPushButton("Correctness", self.control_buttons)
+        self.corr_button.setGeometry(190, 10, 80, 50)
+        self.corr_button.setStyleSheet(""".QPushButton {color: white; border-radius: 4px;background: rgb(255, 100, 100);}
+                                     .QPushButton:pressed {color: white; border-radius: 4px;background: rgb(200, 75, 75);}""")
+        self.corr_button.clicked.connect(self.compute_correctness_TS)
 
         self.trace_panel = QScrollArea(parent = self.control_panel)
         self.trace_panel.setGeometry(10,110,380,self.height - 220)
@@ -255,6 +261,9 @@ class App(QMainWindow):
         if rval is None:
             return
         self.adapter.add_trajs(rval)
+
+    def compute_correctness_TS(self):
+        self.adapter.compute_correctness_TS()
 
 if __name__ == "__main__":
 
