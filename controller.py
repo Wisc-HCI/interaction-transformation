@@ -54,6 +54,7 @@ class Controller:
 
         # generate FAKE sample traces
         #self.trajs = []
+        #original_interaction_trajs = []
         #with open("inputs/{}/history.pkl".format(self.path_to_interaction), "rb") as fp:
         #    self.trajs = pickle.load(fp)
 
@@ -128,6 +129,7 @@ class Controller:
 
     def compute_correctness_TS(self):
         accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(2,1)
+        exit()
 
         for i in range(len(accepted_deletions)):
             # export the interaction
@@ -231,7 +233,7 @@ class Controller:
         for traj in oi_trajs:
             total_reward += traj.reward
             number_trajectories += 1
-        return total_reward*1.0/number_trajectories
+        return total_reward*1.0/number_trajectories if number_trajectories > 0 else 0
 
     def offset_rewards(self, baseline):
         for traj in self.trajs:
@@ -354,7 +356,10 @@ class Controller:
 
         for traj in self.trajs:
             traj_copy = copy.deepcopy(traj)
-            trimmed_traj = util.remove_traj_loop_helper(traj_copy, int(math.floor(len(traj)/2)))
+
+            # len(traj) - 1 is meant to account for not considering the initial state
+            # take the floor so that we don't get an index out of bounds error
+            trimmed_traj = util.remove_traj_loop_helper(traj_copy, int(math.floor((len(traj)-1)/2.0)))
             no_loop_trajectories.append(trimmed_traj)
 
         return no_loop_trajectories
