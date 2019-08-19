@@ -522,6 +522,7 @@ class MCMCAdapt:
             #eq_cost = self.get_eq_cost(unweighted_eq_vect)
             #print("{} - {}".format(perf_cost, eq_cost))
             precost = perf_cost + eq_cost
+            post_eq_cost = eq_cost
 
             self.log.write("at start, eq cost is {}, perf cost is {}".format(eq_cost, perf_cost))
             self.log.write("at start, reward is {}".format(total_reward))
@@ -542,7 +543,9 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             #start_time = time.time()
-            total_itr = 5000000
+            total_itr = 500000
+            num_itr_outside_state_space = 0
+            lim_itr_outside_state_space = 200
             best_distance = distance
             while i < total_itr:
 
@@ -559,11 +562,12 @@ class MCMCAdapt:
                 #if curr_time - lowbound_time >= break_time: #43200
                 #    break
 
-                plot_data["rewards"].append(sum(reward_vect))
-                plot_data["progress"].append(best_design[2])
-                plot_data["cost"].append(precost)
-                plot_data["props"].append(eq_cost)
-                plot_data["distances"].append(distance)
+                if num_itr_outside_state_space == 0:
+                    plot_data["rewards"].append(sum(reward_vect))
+                    plot_data["progress"].append(best_design[2])
+                    plot_data["cost"].append(precost)
+                    plot_data["props"].append(post_eq_cost)
+                    plot_data["distances"].append(distance)
                 #plot_data["time"].append(curr_time)
 
                 undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
@@ -656,12 +660,21 @@ class MCMCAdapt:
                     #exit()
 
                 ###### DO NOT CONTINUE IF SAMPLED PAST THE ALLOWABLE PROP. VIOLATION THRESHOLD
-                '''
                 if passed_mc_thresh:
                     self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                     print("gone past MCMC threshold {}".format(i))
+                    num_itr_outside_state_space += 1
+
+                    # if the number of iterations outside of the state space has passed
+                    # a certain point, reset the TS
+                    if num_itr_outside_state_space > lim_itr_outside_state_space:
+                        print("resetting TS")
+                        TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
+                        self.moddable_sts = self.determine_modifiable_states(TS)
+                        self.moddable_trans = self.determine_modifiable_transitions(TS)
                     continue
-                '''
+                else:
+                    num_itr_outside_state_space = 0
 
                 #print("{} - {}".format(perf_cost, eq_cost))
 
@@ -687,6 +700,7 @@ class MCMCAdapt:
                     #print(TS)
                     accept_counter += 1
                     precost = postcost
+                    post_eq_cost = eq_cost
                     reward_vect = new_reward_vect
                     distance = new_distance
 
@@ -1723,7 +1737,7 @@ class MCMCAdapt:
                 if violation not in curr_violations:
                     curr_violations.append(violation)
         #eq_cost = len(curr_violations)*1.0/self.num_properties
-        eq_cost = (9**len(curr_violations))-1
+        eq_cost = (10**len(curr_violations))-1
         #print(eq_cost)
 
         # adding a flag for if a certain threshold is reached
