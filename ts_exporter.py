@@ -42,7 +42,10 @@ class TSExporter:
         for source_st in self.TS.states:
             source_state = self.TS.states[source_st]
             for target_st in transition_dict[source_state.id]:
-                target_state = self.TS.id2state[target_st]
+                target_state = None #self.TS.id2state[target_st]
+                for state_name,state_obj in self.TS.states.items():
+                    if state_obj.id == target_st:
+                        target_state = state_obj
                 if len(transition_dict[source_state.id][target_state.id]) > 0:
 
                     transition = ET.SubElement(root,'transition')

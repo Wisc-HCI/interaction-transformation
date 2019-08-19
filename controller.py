@@ -135,6 +135,12 @@ class Controller:
             exporter = TSExporter(deletion, self.json_data)
             exporter.export("result_files", mod_tracker=None, ts_name="deletion{}.xml".format(i))
 
+        for i in range(len(accepted_additions)):
+            # export the interaction
+            addition = accepted_additions[i]
+            exporter = TSExporter(addition, self.json_data)
+            exporter.export("result_files", mod_tracker=None, ts_name="addition{}.xml".format(i))
+
     def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
         self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
         self.mcmc.compute_inclusion()
