@@ -543,7 +543,7 @@ class MCMCAdapt:
 
             # we want to cap the time at 12 hours
             #start_time = time.time()
-            total_itr = 500000
+            total_itr = 5000000
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
             best_distance = distance
