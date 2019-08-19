@@ -662,7 +662,7 @@ class MCMCAdapt:
                 ###### DO NOT CONTINUE IF SAMPLED PAST THE ALLOWABLE PROP. VIOLATION THRESHOLD
                 if passed_mc_thresh:
                     self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
-                    print("gone past MCMC threshold {}".format(i))
+                    #print("gone past MCMC threshold {}".format(i))
                     num_itr_outside_state_space += 1
 
                     # if the number of iterations outside of the state space has passed
