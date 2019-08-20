@@ -32,7 +32,7 @@ class App(QMainWindow):
                         action="store_true")
         parser.add_argument("-s", "--smt", help="run smt",
                         action="store_true")
-        parser.add_argument("-n", "--nogui", help="run without gui",
+        parser.add_argument("-n",  "--nogui", help="run without gui",
                         action="store_true")
         args = parser.parse_args(sys.argv[2:])
 
