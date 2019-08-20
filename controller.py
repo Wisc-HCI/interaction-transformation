@@ -50,6 +50,15 @@ class Controller:
 
         # read in arrays, form trajectories
         self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        self.raw_trajs = []
+        for traj in self.trajs:
+            self.raw_trajs.append(traj.copy())
+
+        # combine the raw trajs just in case
+        combined_raw_traj_dict = {}
+        self.combined_raw_trajs = []
+        self.ignore_duplicate_trajectories(self.raw_trajs,combined_raw_traj_dict,self.combined_raw_trajs)
+
         original_interaction_trajs = TrajectoryReader("inputs/{}/oi_history.pkl".format(self.path_to_interaction)).get_trajectories()
 
         # generate FAKE sample traces
@@ -128,8 +137,7 @@ class Controller:
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
     def compute_correctness_TS(self):
-        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(2,1)
-        exit()
+        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(2,1,self.combined_raw_trajs)
 
         for i in range(len(accepted_deletions)):
             # export the interaction
@@ -144,7 +152,7 @@ class Controller:
             exporter.export("result_files", mod_tracker=None, ts_name="addition{}.xml".format(i))
 
     def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
-        self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel)
+        self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel, self.combined_raw_trajs)
         self.mcmc.compute_inclusion()
 
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, update_mod_panel, algorithm="mcmc"):
@@ -343,7 +351,9 @@ class Controller:
         no_loop_trajectories = self.remove_trajectory_loops()
         #print("\n\nTRAJS WITH LOOPS REMOVED")
         #self.print_trajs(no_loop_trajectories)
-        self.ignore_duplicate_trajectories(no_loop_trajectories)
+        self.consolidated_traj_dict = {}
+        self.consolidated_trajs = []
+        self.ignore_duplicate_trajectories(no_loop_trajectories,self.consolidated_traj_dict,self.consolidated_trajs)
 
         #print("\n\nCONSOLIDATED TRAJS")
         #self.print_trajs(self.consolidated_trajs)
@@ -364,21 +374,19 @@ class Controller:
 
         return no_loop_trajectories
 
-    def ignore_duplicate_trajectories(self, no_loop_trajs):
-        self.consolidated_traj_dict = {}
+    def ignore_duplicate_trajectories(self, no_loop_trajs,consolidated_traj_dict,consolidated_trajs):
         for traj in no_loop_trajs:
-            if traj.comparable_string() not in self.consolidated_traj_dict:
-                self.consolidated_traj_dict[traj.comparable_string()] = [Trajectory(traj.vect, traj.reward, traj.is_prefix, traj.is_correctness), 1]
+            if traj.comparable_string() not in consolidated_traj_dict:
+                consolidated_traj_dict[traj.comparable_string()] = [Trajectory(traj.vect, traj.reward, traj.is_prefix, traj.is_correctness), 1]
             else:
-                self.consolidated_traj_dict[traj.comparable_string()][1] += 1
-                self.consolidated_traj_dict[traj.comparable_string()][0].reward += traj.reward
+                consolidated_traj_dict[traj.comparable_string()][1] += 1
+                consolidated_traj_dict[traj.comparable_string()][0].reward += traj.reward
 
-        for key,vect in self.consolidated_traj_dict.items():
+        for key,vect in consolidated_traj_dict.items():
             vect[0].reward = vect[0].reward*1.0/vect[1]
 
-        self.consolidated_trajs = []
-        for traj,vect in self.consolidated_traj_dict.items():
-            self.consolidated_trajs.append(vect[0])
+        for traj,vect in consolidated_traj_dict.items():
+            consolidated_trajs.append(vect[0])
 
     def add_trajs(self, trajs_to_add):
         self.trajs += trajs_to_add

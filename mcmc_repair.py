@@ -18,7 +18,7 @@ import util
 
 class MCMCAdapt:
 
-    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm, log, update_mod_panel):
+    def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, update_trace_panel, algorithm, log, update_mod_panel, combined_raw_trajs):
         self.TS = TS
         self.trajs = trajs
         self.freqs = freqs
@@ -53,9 +53,9 @@ class MCMCAdapt:
 
         self.state_faults = {}
         self.transition_faults = {}
-        self.localize_faults()
+        self.localize_faults(combined_raw_trajs)
 
-    def get_correct_mutations(self, num_additions, num_deletions):
+    def get_correct_mutations(self, num_additions, num_deletions, raw_trajs):
 
         '''
         Precondition: self.TS must itself be correct
@@ -83,10 +83,16 @@ class MCMCAdapt:
 
         existing_state2scores = {} # format = state_scores[state] = [score,score...score]
         existing_state2avescore = {} # format = dict[state] = [ave score]
-        for traj in self.trajs:
-            if traj.reward >0 and not traj.is_generated_prefix:
+        for traj in raw_trajs:
+            #already_seen_in_traj = []
+            if not traj.is_generated_prefix:
                 for item in traj.vect:
                     micro_name = item[1].type
+                    if micro_name is "END":
+                        continue
+
+                    # COMMENT IN if you don't double count microinteractions for being in the same traj twice
+                    #if micro_name not in already_seen_in_traj:
                     if micro_name not in existing_state_names:
                         if micro_name not in state2scores:
                             state2scores[micro_name] = [traj.reward]
@@ -97,11 +103,27 @@ class MCMCAdapt:
                             existing_state2scores[micro_name] = [traj.reward]
                         else:
                             existing_state2scores[micro_name].append(traj.reward)
+                    #already_seen_in_traj.append(micro_name)
 
             for state,arr in state2scores.items():
                 state2avescore[state] = sum(arr)*1.0/len(arr)
             for state,arr in existing_state2scores.items():
                 existing_state2avescore[state] = sum(arr)*1.0/len(arr)
+
+        '''
+        # debug point
+
+        for state in state2scores:
+            print("{} - {} (n.e.)".format(state,state2scores[state]))
+        for state in existing_state2scores:
+            print("{} - {}".format(state,existing_state2scores[state]))
+
+        for state in state2avescore:
+            print("{} - {} (n.e.)".format(state,state2avescore[state]))
+        for state in existing_state2avescore:
+            print("{} - {}".format(state,existing_state2avescore[state]))
+        exit()
+        '''
 
         def decide_on_states_to_add(additions_left, score_dict):
             state2add = []
@@ -124,6 +146,14 @@ class MCMCAdapt:
         nonexisting_states2add = decide_on_states_to_add(num_additions,state2avescore)
         existing_states2add = decide_on_states_to_add(num_additions - len(nonexisting_states2add),existing_state2avescore)
         states2add = nonexisting_states2add + existing_states2add
+
+        '''
+        # Debug point
+
+        print(nonexisting_states2add)
+        print(existing_states2add)
+        exit()
+        '''
 
         # check that each state in states2add (existing + not) is unique
         unique_states_2_add = []
@@ -164,12 +194,26 @@ class MCMCAdapt:
                         trans = avail_tran
                 self.add_state(TS, {"name": state_name}, trans, all_states, all_trans, added_states, mod_tracker, 0)
                 append_cost_and_TS(TS,removed_transitions,property_checker,correct_additions)
-            print(correct_additions)
             best_addition = None
             score_values = sorted(list(correct_additions.keys()))
             TS_list = correct_additions[score_values[0]]
             accepted_TS = TS_list[0]
             accepted_additions.append(accepted_TS)
+
+
+        # debug
+        '''
+        for ad in correct_additions:
+            print(ad)
+            for tss in correct_additions[ad]:
+                print(str(tss))
+        print("~~~~~~~~~")
+        for tss in accepted_additions:
+            print(tss)
+
+        exit()
+        '''
+
 
         # get the deletions
         correct_deletions = {}  # format = dict[score] = TS
@@ -196,6 +240,17 @@ class MCMCAdapt:
             if reached_amount:
                 break
 
+        '''
+        # debug
+
+        for ad in correct_deletions:
+            print(ad)
+            for tss in correct_deletions[ad]:
+                print(str(tss))
+
+        exit()
+        '''
+
         return accepted_additions, accepted_deletions
 
     def compute_inclusion(self):
@@ -217,14 +272,14 @@ class MCMCAdapt:
         path_traversal.check([],[], traj_status)
         self.update_trace_panel(traj_status)
 
-    def localize_faults(self):
+    def localize_faults(self, combined_raw_trajs):
 
         state_fault_severity = {}
         transition_fault_severity = {}
 
-        # transitions and states are weighted by frequency * sum of severity w/in the non-consolidated trajectories
+        # transitions and states are weighted by frequency * sum of severity w/in the combined non loop-removed trajectories
         # if a component exists multiple times within a trajectory, that counts as higher frequency -- duplicate severity
-        for traj in self.trajs:
+        for traj in combined_raw_trajs:
             vect = traj.vect
 
             # get the severity of each transition fault
@@ -247,6 +302,14 @@ class MCMCAdapt:
 
         for trans_pair,severities in transition_fault_severity.items():
             self.transition_faults[trans_pair] = sum(severities)*1.0/len(severities)
+
+        '''
+        debug
+
+        print(self.state_faults)
+        print(self.transition_faults)
+        exit()
+        '''
 
     def determine_modifiable_states(self, TS):
         modifiable_states = []
@@ -295,11 +358,12 @@ class MCMCAdapt:
 
         scores = {}
 
+        print(self.transition_faults)
+
         for source_id, tar_dict in TS.transitions.items():
             for target_id, trans_dict in tar_dict.items():
                 for trans in trans_dict:
                     tup = (trans.source.micros[0]["name"],trans.condition,trans.target.micros[0]["name"])
-
                     if tup not in self.transition_faults:
                         continue
                     else:
@@ -311,6 +375,17 @@ class MCMCAdapt:
                         scores[score].append(trans)
 
         sorted_scores = sorted(list(scores.keys()))
+
+        '''
+        # debug
+
+        print(sorted_scores)
+        for score,slist in scores.items():
+            print(score)
+            for transs in slist:
+                print(str(transs))
+        exit()
+        '''
 
         i = 0
         j = 0
@@ -488,7 +563,8 @@ class MCMCAdapt:
             models_unchecked = 0
 
             # we want to cap the time at 12 hours
-            total_itr = 1000000
+            total_itr = 5000000
+            self.state_modifis = 0
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
             best_distance = distance
@@ -591,6 +667,7 @@ class MCMCAdapt:
                 if i % (total_itr/100) == 0:
                     print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
                     self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    #print(self.state_modifis)
                     models_checked = 0
                     models_unchecked = 0
                 i+=1
@@ -751,6 +828,7 @@ class MCMCAdapt:
                 if len(state.in_trans) <= self.mod_limit-num_mods:
                     allowable_modifications.append(state)
         num_state_mods = 1 if (len(allowable_modifications)>0 or len(modified_states)>0) else 0 #len(all_states) if num_mods < self.mod_limit else 0
+        num_state_mods = len(self.moddable_sts)*1.0/len(self.moddable_trans)
         '''
         done with potential modifications
         NOTE: what do we do when there are limited modifications that can be made??
@@ -759,6 +837,7 @@ class MCMCAdapt:
         #num_transition_mods = the number of transitions to play with is > 0 and there is mod room OR
         #num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or min(self.mod_limit - num_nonempties,num_trans)>0 and self.mod_limit<=num_mods) else 0
         num_transition_mods = 1 if ((num_trans>0 and self.mod_limit>num_mods) or (num_nonempties > 0)) else 0
+        num_transition_mods = 1
         #num_transition_deletions = num_trans if num_mods < self.mod_limit else min(self.mod_limit - num_empties,num_trans)
         num_transition_deletions = 1 if ((num_trans>0 and self.mod_limit>num_mods) or (num_nonempties > 0)) else 0
         num_transition_deletions = 0
@@ -812,18 +891,22 @@ class MCMCAdapt:
 
         undoable = None
         if selection == 1:    # modify existing state
-            #print("~CHOICE~: state modification")
+            #print("\n\n~CHOICE~: state modification")
+            self.state_modifis += 1
 
             # randomly pick a state to modify
             total_modifiable_states = allowable_modifications + modified_states
-            state = random.choice(total_modifiable_states)
+            #state = random.choice(total_modifiable_states)
+            state = random.choice(all_states)
             curr_state_name = state.name
             old_micro = state.micros[0]
 
             # randomly pick a new micro
             micro = random.choice(self.micro_selection)
             state_name = self.get_unused_name(micro["name"], TS)
+            #print([str(st) for st in self.moddable_sts])
             state.name = state_name
+            #print("{} to {}".format(old_micro,micro))
 
             # replace the old state with the new state in TS.states[state_name]
             TS.states.pop(curr_state_name)
@@ -839,19 +922,26 @@ class MCMCAdapt:
                     mod_tracker.update_mod_tracker(trans)
 
             # check if num mods went over the limit
-            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
-                print("ERROR: modifying an existing state (1) resulted in more mods than allowed")
-                exit()
+            #if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+            #    print("ERROR: modifying an existing state (1) resulted in more mods than allowed")
+            #    exit()
 
             # prepare the undoable
             undoable = (1, (state, curr_state_name, old_micro))
         elif selection == 2:  # modify existing transition
-            #print("~CHOICE~: transition modification")
+            #print("\n\n~CHOICE~: transition modification")
             # randomly pick a transition
+            '''
             if mod_limited:
                 transition = random.choice(mod_tracker.get_mod_tracker_nonempty_trans(removed_transitions))
             else:
                 transition = random.choice(all_trans)
+            '''
+            transition = random.choice(all_trans)
+
+            #print("changing transition {}".format(str(transition)))
+            #for trr in self.moddable_trans:
+            #    print(str(trr))
 
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
 
@@ -872,9 +962,9 @@ class MCMCAdapt:
             mod_tracker.update_mod_tracker(transition)
 
             # check if num mods went over the limit
-            if self.mod_limit < mod_tracker.check_mod_tracker_sum():
-                print("ERROR: modifying an existing transition (2) resulted in more mods than allowed")
-                exit()
+            #if self.mod_limit < mod_tracker.check_mod_tracker_sum():
+            #    print("ERROR: modifying an existing transition (2) resulted in more mods than allowed")
+            #    exit()
 
             undoable = (2, (target, transition, old_target))
         elif selection == 3:  # delete existing transition
