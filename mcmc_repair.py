@@ -72,7 +72,7 @@ class MCMCAdapt:
             print("ERROR: starting interaction is not correct")
             exit()
 
-        num_non_correctness_trajs, abs_min, abs_max = self.calculate_abs_min_max()
+        L_pos, abs_min, abs_max = self.calculate_abs_min_max()
 
         # determine which states to insert into the interaction
         # first priority -- states that have been seen in positive trajectories
@@ -176,7 +176,7 @@ class MCMCAdapt:
                 path_traversal = PathTraversal(new_TS, self.trajs, self.freqs, removed_transitions)
                 unweighted_rew_vect = []
                 path_traversal.check(unweighted_rew_vect, [], {})
-                perf_cost = self.get_perf_cost(unweighted_rew_vect, abs_min, abs_max, num_non_correctness_trajs)
+                perf_cost = self.get_perf_cost(unweighted_rew_vect, abs_min, abs_max, L_pos)
                 if perf_cost not in correct_mods:
                     correct_mods[perf_cost] = [new_TS]
                 else:
@@ -450,18 +450,33 @@ class MCMCAdapt:
         '''
         R_neg = 0.0
         R_pos = 0.0
-        num_non_correctness_trajs = len(self.trajs)
+        L_pos = 0
         for traj in self.trajs:
             i = traj.reward
             if i < 0:
                 R_neg += abs(i)
             elif i > 0:
                 R_pos += abs(i)
+                L_pos += 1
 
+        if L_pos == 0:
+            print("ERROR: cannot run program without any positive examples")
+            exit()
+        elif R_neg == 0:
+            print("ERROR: cannot run program without any negative examples")
+            exit()
+
+        print("R_MAX_POS: {}".format(R_pos))
+        abs_min = (0.0001/R_pos)*(L_pos/(L_pos+1))
+        abs_max = ((R_neg+0.0001)/R_neg)*L_pos
+
+        '''
+        #old
         abs_min = (num_non_correctness_trajs-R_pos)*1.0/(2*num_non_correctness_trajs)
         abs_max = (num_non_correctness_trajs+R_neg)*1.0/(2*num_non_correctness_trajs)
+        '''
 
-        return num_non_correctness_trajs, abs_min, abs_max
+        return L_pos, abs_min, abs_max
 
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
         start_time = time.time()
@@ -483,7 +498,7 @@ class MCMCAdapt:
                      6:{"name":"s_del","count": 0}}
 
         # calculate the absolute max and the absolute min for this set of trajectories
-        num_non_correctness_trajs, abs_min, abs_max = self.calculate_abs_min_max()
+        L_pos, abs_min, abs_max = self.calculate_abs_min_max()
 
         # copy the TS
         TS, all_trans, all_states, added_states, modified_states, removed_transitions = self.reset_TS(mod_tracker)
@@ -540,7 +555,7 @@ class MCMCAdapt:
             path_traversal.check(unweighted_rew_vect, unweighted_eq_vect, traj_status)
             reward_vect = unweighted_rew_vect
             total_reward = sum(reward_vect)
-            perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max, num_non_correctness_trajs)
+            perf_cost = self.get_perf_cost(reward_vect, abs_min, abs_max, L_pos)
             new_eq_vect = self.model_check(TS, removed_transitions, property_checker, correctness_trajs, prop_tracker)
             eq_cost,_ = self.get_eq_cost(new_eq_vect)
             precost = perf_cost + eq_cost
@@ -563,7 +578,7 @@ class MCMCAdapt:
             models_unchecked = 0
 
             # we want to cap the time at 12 hours
-            total_itr = 5000000
+            total_itr = 10000000
             self.state_modifis = 0
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
@@ -601,7 +616,7 @@ class MCMCAdapt:
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
                 total_reward = sum(new_reward_vect)
-                perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, num_non_correctness_trajs)
+                perf_cost = self.get_perf_cost(new_reward_vect, abs_min, abs_max, L_pos)
                 eq_cost,passed_mc_thresh = self.get_eq_cost(unweighted_eq_vect)
 
                 # if eq cost is 0, run the model checker
@@ -1563,7 +1578,9 @@ class MCMCAdapt:
 
         return (R_neg + 1/(R_pos))
 
-    def get_perf_cost(self, reward_vect, abs_min, abs_max, num_noncorrectness):
+    def get_perf_cost(self, reward_vect, abs_min, abs_max, L_pos):
+        '''
+        # THIS IS THE OLD PERF COST
         R_neg = 0.0
         R_pos = 0.0
         l = num_noncorrectness
@@ -1580,6 +1597,35 @@ class MCMCAdapt:
         perf_cost = ((raw_perf_cost)-abs_min)*1.0/(abs_max-abs_min) if (abs_max - abs_min) > 0 else 0
 
         if perf_cost>1.0 or perf_cost<0.0:
+            exit()
+
+        return perf_cost
+        '''
+
+        # need R_neg, R_pos, and L_act_pos
+        R_neg = 0.0
+        R_pos = 0.0
+        L_act_pos = 0
+        for i in reward_vect:
+            if i < 0:
+                R_neg += abs(i)
+            elif i > 0:
+                R_pos += abs(i)
+                L_act_pos += 1
+
+        # calculate raw perf
+        if (R_neg + R_pos) > 0:
+            perf_raw = (R_neg+0.0001)/(R_neg+R_pos)
+        else:
+            return 1.0
+        weighting = (L_pos*1.0)/(L_act_pos+1)
+        perf_raw = perf_raw * weighting
+
+        perf_cost = (perf_raw-abs_min)*1.0/(abs_max-abs_min)
+        #print("{} - {} - {} - {} - {} - {} - {} - {}".format(L_pos,L_act_pos,R_pos,R_neg,abs_max,abs_min,perf_raw,perf_cost))
+
+        if perf_cost>1.0 or perf_cost<0.0:
+            print("OVER/UNDER 0! {}".format(perf_cost))
             exit()
 
         return perf_cost

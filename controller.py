@@ -137,7 +137,7 @@ class Controller:
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
     def compute_correctness_TS(self):
-        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(2,1,self.combined_raw_trajs)
+        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(1,1,self.combined_raw_trajs)
 
         for i in range(len(accepted_deletions)):
             # export the interaction
