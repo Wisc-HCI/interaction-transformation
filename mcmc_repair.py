@@ -583,15 +583,16 @@ class MCMCAdapt:
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
             best_distance = distance
-            max_time_allowed = 30 #36000
+            max_time_allowed = 36000
             start_time = time.time()
+            model_checker_avoided_being_called = 0
             while i < total_itr:
 
                 # if timeout, exit
                 if time.time() - start_time > max_time_allowed:
                     print("timed out at {} iterations".format(i))
-                    print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
-                    self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    print("itr {}      chk/unchk {} ({} chk, {} unchk, {} avoids), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, model_checker_avoided_being_called, len(correctness_trajs)))
+                    self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk, {} avoids), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, model_checker_avoided_being_called, len(correctness_trajs)))
                     break
 
                 # if i == 0, check to see if we're already at the total reward
@@ -635,6 +636,7 @@ class MCMCAdapt:
                     eq_cost,passed_mc_thresh = self.get_eq_cost(new_eq_vect)
                     models_checked += 1
                 else:
+                    model_checker_avoided_being_called += 1
                     models_unchecked += 1
 
                 ###### DO NOT CONTINUE IF SAMPLED PAST THE ALLOWABLE PROP. VIOLATION THRESHOLD
@@ -689,8 +691,8 @@ class MCMCAdapt:
                             break
 
                 if i % (total_itr/100) == 0:
-                    print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
-                    self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    print("itr {}      chk/unchk {} ({} chk, {} unchk, {} avoids), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, model_checker_avoided_being_called, len(correctness_trajs)))
+                    self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk, {} avoids), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, model_checker_avoided_being_called, len(correctness_trajs)))
                     #print(self.state_modifis)
                     models_checked = 0
                     models_unchecked = 0
