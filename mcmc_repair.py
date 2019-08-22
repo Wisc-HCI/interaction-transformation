@@ -583,7 +583,16 @@ class MCMCAdapt:
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
             best_distance = distance
+            max_time_allowed = 30 #36000
+            start_time = time.time()
             while i < total_itr:
+
+                # if timeout, exit
+                if time.time() - start_time > max_time_allowed:
+                    print("timed out at {} iterations".format(i))
+                    print("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    self.log.write("itr {}      chk/unchk {} ({} chk, {} unchk), # of correctness trajs {}".format(i, models_checked*1.0/models_unchecked if models_unchecked>0 else "undefined", models_checked, models_unchecked, len(correctness_trajs)))
+                    break
 
                 # if i == 0, check to see if we're already at the total reward
                 if i == 0:
