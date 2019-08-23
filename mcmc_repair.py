@@ -639,7 +639,7 @@ class MCMCAdapt:
                 unweighted_rew_vect = []
                 unweighted_eq_vect = []
                 traj_status = {}
-                path_traversal.check(unweighted_rew_vect, unweighted_eq_vect, traj_status, cond_dict)
+                path_traversal.check(unweighted_rew_vect, unweighted_eq_vect, traj_status)
 
                 #new_reward_vect = [unweighted_rew_vect[i] * probs_vect[i] for i in range(len(probs_vect))]
                 new_reward_vect = unweighted_rew_vect
@@ -663,7 +663,7 @@ class MCMCAdapt:
 
                 ###### DO NOT CONTINUE IF SAMPLED PAST THE ALLOWABLE PROP. VIOLATION THRESHOLD
                 if passed_mc_thresh:
-                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker, cond_dict)
+                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                     num_itr_outside_state_space += 1
 
                     # if the number of iterations outside of the state space has passed
@@ -694,7 +694,7 @@ class MCMCAdapt:
                         checking_point_reject_counter += 1
                     reject_counter += 1
                     temp_reject_counter += 1
-                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker, cond_dict)
+                    self.undo_modification(undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker)
                 else:  # accept
                     if checking_point:
                         checking_point_accept_counter += 1
