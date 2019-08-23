@@ -872,7 +872,7 @@ class MCMCAdapt:
 
         return new_eq_vect
 
-    def modify_TS(self, TS, all_trans_all, all_states_all, added_states, modified_states, removed_transitions_all, mod_tracker, cond_dict):
+    def modify_TS(self, TS, all_trans_all, all_states_all, added_states, modified_states, removed_transitions_all, mod_tracker):
 
         # throttle the TS modifier
         all_trans = list(set(all_trans_all) & set(self.moddable_trans))
@@ -1037,7 +1037,7 @@ class MCMCAdapt:
             mod_tracker.update_mod_tracker(transition)
 
             # modify cond_dict
-            cond_dict[transition.source][transition.condition] = transition.target
+            #cond_dict[transition.source][transition.condition] = transition.target
 
             # check if num mods went over the limit
             #if self.mod_limit < mod_tracker.check_mod_tracker_sum():
@@ -1414,7 +1414,7 @@ class MCMCAdapt:
         for st_old in TS.states:
             del TS.transitions[TS.states[st_old].id][state.id]
 
-    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker, cond_dict):
+    def undo_modification(self, undoable, TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker):
 
         selection = undoable[0]
 
@@ -1460,7 +1460,7 @@ class MCMCAdapt:
             mod_tracker.update_mod_tracker(transition)
 
             # undo modify cond_dict
-            cond_dict[transition.source][transition.condition] = transition.target
+            #cond_dict[transition.source][transition.condition] = transition.target
 
         elif selection == 3:  # re-add existing transition
             #print("undoing that removal")
