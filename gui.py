@@ -55,8 +55,8 @@ class App(QMainWindow):
         # show the UI
         self.resized.connect(self.resizeWindow)
         self.initUI()
+        self.compute_inclusion()
         if not args.nogui:
-            self.compute_inclusion()
             self.show()
         else:
             self.mcmc_adapt()

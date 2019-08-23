@@ -6,16 +6,17 @@ class PathTraversal:
         self.freqs = freqs
         self.removed_transitions = removed_transitions
 
-    def check(self, sats, eqs, trajectory_status):
+    def check(self, sats, eqs, trajectory_status, cond_dict=None):
 
         # create a temporary dictionary of dict[source_state][condition] = target_state
+        #if cond_dict is None:
         cond_dict = {}
         ts_states = self.TS.states
         for state_name in ts_states:
             state = ts_states[state_name]
             cond_dict[state] = {}
             for out_trans in state.out_trans:
-                cond_dict[state][out_trans.condition] = (out_trans.target.micros[0]["name"],out_trans.target)
+                cond_dict[state][out_trans.condition] = out_trans.target
 
         #sats = []
         #probs = []
@@ -39,8 +40,8 @@ class PathTraversal:
                 test_out = vect[i][1].type
 
 
-                if inp in cond_dict[curr_st] and cond_dict[curr_st][inp][0] == test_out:
-                    curr_st = cond_dict[curr_st][inp][1]
+                if inp in cond_dict[curr_st] and cond_dict[curr_st][inp].micros[0]["name"] == test_out:
+                    curr_st = cond_dict[curr_st][inp]
                 else:
                     sat = False
                     trajectory_status[traj] = (traj.reward,False)
