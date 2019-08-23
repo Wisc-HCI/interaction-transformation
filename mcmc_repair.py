@@ -626,7 +626,7 @@ class MCMCAdapt:
                     plot_data["props"].append(post_eq_cost)
                     plot_data["distances"].append(distance)
 
-                undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker, cond_dict)
+                undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker) # put cond_dict here
 
                 # calculate the reward
                 new_distance = mod_tracker.check_mod_tracker_sum()
