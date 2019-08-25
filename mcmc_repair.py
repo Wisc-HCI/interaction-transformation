@@ -304,10 +304,11 @@ class MCMCAdapt:
             self.transition_faults[trans_pair] = sum(severities)*1.0/len(severities)
 
         '''
-        debug
-
-        print(self.state_faults)
-        print(self.transition_faults)
+        #debug
+        for st in self.state_faults:
+            print("{} - {}".format(str(st),self.state_faults[st]))
+        for tr in self.transition_faults:
+            print("{} - {}".format(str(tr),self.transition_faults[tr]))
         exit()
         '''
 
@@ -316,6 +317,7 @@ class MCMCAdapt:
 
         scores = {}
 
+        # get a sorted dictionary of states
         for st_name in TS.states:
             # ignore states that aren't scored
             if st_name not in self.state_faults:
@@ -330,6 +332,55 @@ class MCMCAdapt:
 
         sorted_scores = sorted(list(scores.keys()))
         print(sorted_scores)
+
+        # remove the states in which changes would cause a property violation
+        mod_tracker = ModificationTracker()
+        property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
+        Properties = property_module.Properties
+        property_checker = Properties(self.inputs, self.outputs)
+        for score,state_list in scores.items():
+            state_list_to_remove = []
+            for state in state_list:
+                state_name = state.name
+                # can we modify st?
+                # can we change it to available_state, or will it always result in a violation?
+                contains_acceptable_mod = False
+                for available_state in self.outputs.alphabet:
+                    if state.micros[0]["name"] != available_state:   # don't worry about testing the change to itself
+                        TS_copy,all_trans, all_states, added_states,_,removed_transitions = self.reset_TS(mod_tracker)
+
+                        # make the change
+                        print("\n\n\n~~~~~~~~~")
+                        for state_name_2 in TS_copy.states:
+                            print("{} ({})".format(state_name_2, TS_copy.states[state_name_2].micros[0]["name"]))
+                        state2change = TS_copy.states[state_name]
+                        print("~~~")
+                        print("{} to {}".format(state2change.name,available_state))
+                        print("~~~")
+                        TS_copy.states.pop(state2change.name)
+                        state2change.name = self.get_unused_name(available_state, TS_copy)
+                        TS_copy.states[state2change.name] = state2change
+                        state2change.micros = [{"name": available_state}]
+                        for state_name_2 in TS_copy.states:
+                            print("{} ({})".format(state_name_2, TS_copy.states[state_name_2].micros[0]["name"]))
+
+                        # test the change
+                        new_eq_vect = self.model_check(TS_copy, removed_transitions, property_checker, [], [[]], append_correctness_traj=False)
+                        eq_cost,_ = self.get_eq_cost(new_eq_vect)
+                        if eq_cost == 0:
+                            contains_acceptable_mod = True
+
+                if not contains_acceptable_mod:
+                    state_list_to_remove.append(state)
+            for state in state_list_to_remove:
+                state_list.remove(state)
+        scores_to_remove = []
+        for score,state_list in scores.items():
+            if len(state_list) == 0:
+                scores_to_remove.append(score)
+        for score in scores_to_remove:
+            scores.pop(score)
+            sorted_scores.remove(score)
 
         i = 0
         j = 0
@@ -517,6 +568,10 @@ class MCMCAdapt:
         self.moddable_sts = self.determine_modifiable_states(TS)
         self.moddable_trans = self.determine_modifiable_transitions(TS)
         cond_dict = self.create_cond_dict(TS)
+        for trans in self.moddable_trans:
+            print(str(trans))
+        for st in self.moddable_sts:
+            print(str(st))
 
         # setup LTL property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
