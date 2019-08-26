@@ -313,6 +313,10 @@ class MCMCAdapt:
         '''
 
     def determine_modifiable_states(self, TS):
+
+        # move these somewhere else eventually
+        self.modstate2availstates = {}
+
         modifiable_states = []
 
         scores = {}
@@ -342,6 +346,7 @@ class MCMCAdapt:
             state_list_to_remove = []
             for state in state_list:
                 state_name = state.name
+                self.modstate2availstates[state] = []
                 # can we modify st?
                 # can we change it to available_state, or will it always result in a violation?
                 contains_acceptable_mod = False
@@ -369,9 +374,11 @@ class MCMCAdapt:
                         eq_cost,_ = self.get_eq_cost(new_eq_vect)
                         if eq_cost == 0:
                             contains_acceptable_mod = True
+                            self.modstate2availstates[state].append({"name": available_state})
 
                 if not contains_acceptable_mod:
                     state_list_to_remove.append(state)
+                    self.modstate2availstates.pop(state)
             for state in state_list_to_remove:
                 state_list.remove(state)
         scores_to_remove = []
@@ -381,6 +388,9 @@ class MCMCAdapt:
         for score in scores_to_remove:
             scores.pop(score)
             sorted_scores.remove(score)
+
+        for sttt in self.modstate2availstates:
+            print("{} -- {}".format(str(sttt),self.modstate2availstates[sttt]))
 
         i = 0
         j = 0
@@ -1032,7 +1042,8 @@ class MCMCAdapt:
             old_micro = state.micros[0]
 
             # randomly pick a new micro
-            micro = random.choice(self.micro_selection)
+            #micro = random.choice(self.micro_selection)
+            micro = random.choice(self.modstate2availstates[state])
             state_name = self.get_unused_name(micro["name"], TS)
             #print([str(st) for st in self.moddable_sts])
             state.name = state_name
