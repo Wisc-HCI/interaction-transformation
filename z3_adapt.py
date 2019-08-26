@@ -27,11 +27,13 @@ class Z3Adapt(Adapter):
         # create mapping of state2id
         self.state2id = {self.TS.init: 0}
         self.state2id_rev = {0:self.TS.init}
+        self.max_state_id = 0
         idx = 1
         for state_name,state in self.TS.states.items():
-            if state != self.TS.init.name:
+            if state != self.TS.init:
                 self.state2id[state] = idx
                 self.state2id_rev[idx] = state
+                self.max_state_id += 1
                 idx += 1
 
         # create mapping of micro2id
@@ -110,17 +112,19 @@ class Z3Adapt(Adapter):
                 continue
             state_micro = self.micro2id_rev[state_micro_id]
             state_name = state_micro  # make this unique!
-            new_state = State(state_name,id,state_micro)
+            new_state = State(state_name,str(id),state_micro)
             if old_TS.init == state_orig:
                 init = new_state
             states[new_state.name] = new_state
 
+        print(self.state2id)
         # transitions
         transitions = {}
-        for _,s1 in states.items():
-            transitions[str(s1.id)] = {}
-            for _,s2 in states.items():
-                transitions[str(s1.id)][str(s2.id)] = []
+        for _,s1 in self.state2id.items():
+            transitions[str(s1)] = {}
+            for _,s2 in self.state2id.items():
+                print("{} - {}".format(s1,s2))
+                transitions[str(s1)][str(s2)] = []
 
         # create the transitions
         for state_orig,state_id in self.state2id.items():
@@ -128,11 +132,19 @@ class Z3Adapt(Adapter):
                 target_state_id = int(str(m.evaluate(f_T(state_id,inp_id))))
                 if target_state_id == -1:
                     continue
-                new_trans = Transition(state_id,inp_name,target_state_id)
+                new_trans = Transition(str(state_id),inp_name,str(target_state_id))
                 transitions[str(state_id)][str(target_state_id)].append(new_trans)
 
         # create TS
         new_TS = TS(states,transitions,init)
+
+        # debug
+        for st_name,st in states.items():
+            print("state {}, id={}".format(str(st),st.id))
+        for _,s1 in transitions.items():
+            for _,s2 in s1.items():
+                for trans in s2:
+                    print(str(trans))
 
         # link everything together
         SMUtil().build(new_TS.transitions, new_TS.states)
@@ -140,11 +152,12 @@ class Z3Adapt(Adapter):
         print(str(new_TS))
 
     def setup_TS(self,f_T,f_M):
+        print(len(self.state2id))
         setup_constraints = And(True)
 
         # TRANSITIONS
         sourcecon2trans = {}
-        for state_name,state in self.TS.states:
+        for state_name,state in self.TS.states.items():
             sourcecon2trans[state] = {}
             for inp in self.inputs.alphabet:
                 sourcecon2trans[state][inp] = None
@@ -162,10 +175,10 @@ class Z3Adapt(Adapter):
                     setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)==-1)
                 elif trans not in self.moddable_trans:
                     target_id = self.state2id[trans.target]
-                    setup_constraints = And(setup_constraints, f_T(target_state_id,cons_id)==target_id)
+                    setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)==target_id)
                 else: # it is in moddable_trans
-                    setup_constraints = And(setup_constraints, f_T(target_state_id,cons_id)>-1)
-                    setup_constraints = And(setup_constraints, f_T(target_state_id,cons_id)<len(self.state2id))
+                    setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)>-1)
+                    setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)<=self.max_state_id)
 
         # STATES
         for state_name,state in self.TS.states.items():
