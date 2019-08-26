@@ -221,10 +221,9 @@ class Controller:
 
         #for i in range(2):
         #print("Day {}".format(i))
-        for traj in self.consolidated_trajs:
-            print(traj)
-        z3 = Z3Adapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel)
-        self.TS, st_reachables, correctness_trajs = z3.adapt(reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
+
+        z3 = Z3Adapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
+        self.TS, st_reachables, correctness_trajs = z3.adapt()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
