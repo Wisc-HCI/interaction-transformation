@@ -731,8 +731,8 @@ class MCMCAdapt(Adapter):
             old_micro = state.micros[0]
 
             # randomly pick a new micro
-            #micro = random.choice(self.micro_selection)
-            micro = random.choice(self.modstate2availstates[state])
+            micro = random.choice(self.micro_selection)
+            #micro = random.choice(self.modstate2availstates[state])
             state_name = self.get_unused_name(micro["name"], TS)
             #print([str(st) for st in self.moddable_sts])
             state.name = state_name
@@ -776,8 +776,8 @@ class MCMCAdapt(Adapter):
             TS.transitions[str(transition.source.id)][str(transition.target.id)].remove(transition)
 
             # randomly pick a target
-            #target = random.choice(all_states_all)
-            target = random.choice(self.modtrans2availdestinations[transition])
+            target = random.choice(all_states_all)
+            #target = random.choice(self.modtrans2availdestinations[transition])
             #print("modifying an existing transition from {}->{}->{} to {}->{}->{}".format(transition.source.name, transition.condition, transition.target.name, transition.source.name, transition.condition, target.name))
             old_target_id = transition.target_id
             old_target = transition.target

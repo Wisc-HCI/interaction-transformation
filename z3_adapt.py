@@ -71,6 +71,13 @@ class Z3Adapt(Adapter):
         # set transitions and micros based on their current id
         setup_constraints = self.setup_TS(f_T,f_M)
 
+        # trajectory constraints
+        traj_constraints = And(True)
+        for i in range(len(self.trajs)):
+            traj = self.trajs[i]
+            single_traj_constraint = self.make_traj_constraint(traj,i,f_T,f_M,B)
+            traj_constraints = And(traj_constraints, single_traj_constraint)
+
         # add all constraints together
         constraints = And(setup_constraints)
 
@@ -117,13 +124,11 @@ class Z3Adapt(Adapter):
                 init = new_state
             states[new_state.name] = new_state
 
-        print(self.state2id)
         # transitions
         transitions = {}
         for _,s1 in self.state2id.items():
             transitions[str(s1)] = {}
             for _,s2 in self.state2id.items():
-                print("{} - {}".format(s1,s2))
                 transitions[str(s1)][str(s2)] = []
 
         # create the transitions
@@ -132,27 +137,35 @@ class Z3Adapt(Adapter):
                 target_state_id = int(str(m.evaluate(f_T(state_id,inp_id))))
                 if target_state_id == -1:
                     continue
-                new_trans = Transition(str(state_id),inp_name,str(target_state_id))
+                new_trans = Transition(str(state_id),str(target_state_id),inp_name)
                 transitions[str(state_id)][str(target_state_id)].append(new_trans)
 
         # create TS
         new_TS = TS(states,transitions,init)
-
-        # debug
-        for st_name,st in states.items():
-            print("state {}, id={}".format(str(st),st.id))
-        for _,s1 in transitions.items():
-            for _,s2 in s1.items():
-                for trans in s2:
-                    print(str(trans))
 
         # link everything together
         SMUtil().build(new_TS.transitions, new_TS.states)
 
         print(str(new_TS))
 
+    def make_traj_constraint(self,traj,id,f_T,f_M,B):
+        traj_constraint = And(True)
+
+        exists_within = And(True)
+        sts = ["traj_st_{}_{}".format(id,i) for i in range(len(traj.vect))+1]
+        vect = traj.vect
+        for i in range(len(vect)-1):
+            condition_id = self.micro2id[vect[i+1][0].type]
+            exists_within = And(exists_within,f_T(sts[i]))
+
+        traj_constraint = And(traj_constraint,Implies(exists_within,B[traj]==1))
+        traj_constraint = And(traj_constraint,Implies(B[traj]==1,exists_within))
+        traj_constraint = And(traj_constraint,Implies(Not(exists_within),B[traj]==0))
+        traj_constraint = And(traj_constraint,Implies(B[traj]==0,Not(exists_within)))
+
+        return traj_constraint
+
     def setup_TS(self,f_T,f_M):
-        print(len(self.state2id))
         setup_constraints = And(True)
 
         # TRANSITIONS
@@ -203,8 +216,13 @@ class Z3Adapt(Adapter):
                     orblock = Or(orblock,f_M(state_id)==avail_state_micro_id)
                 setup_constraints = And(setup_constraints,orblock)
 
+        # place bounds
+
+
         # handle the -1's
         setup_constraints = And(setup_constraints,f_M(-1)==-1)
+        for i in range(len(self.state2id)):
+            setup_constraints = And(setup_constraints,f_M(i)>-1)
         for i in range(len(self.micro2id)):
             setup_constraints = And(setup_constraints,f_T(-1,i)==-1)
 

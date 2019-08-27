@@ -223,6 +223,7 @@ class Adapter:
 
         sorted_scores = sorted(list(scores.keys()))
 
+        '''
         # remove the transitions in which changes would cause a property violation
         # remove the states in which changes would cause a property violation
         mod_tracker = ModificationTracker()
@@ -284,6 +285,7 @@ class Adapter:
 
         #for sttt in self.modstate2availstates:
         #    print("{} -- {}".format(str(sttt),self.modstate2availstates[sttt]))
+        '''
 
 
         '''
