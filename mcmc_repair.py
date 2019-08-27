@@ -419,6 +419,7 @@ class MCMCAdapt(Adapter):
             start_time = time.time()
             model_checker_avoided_being_called = 0
             checking_point = True if eq_cost == 0 else False
+            print("starting reward: {}".format(total_reward))
             while i < total_itr:
 
                 # if timeout, exit
@@ -434,12 +435,14 @@ class MCMCAdapt(Adapter):
                         print("the current design is already the best, so returning that")
                         break
 
+                '''
                 if num_itr_outside_state_space == 0:
                     plot_data["rewards"].append(sum(reward_vect))
                     plot_data["progress"].append(best_design[2])
                     plot_data["cost"].append(precost)
                     plot_data["props"].append(post_eq_cost)
                     plot_data["distances"].append(distance)
+                '''
 
                 undoable = self.modify_TS(TS, all_trans, all_states, added_states, modified_states, removed_transitions, mod_tracker) # put cond_dict here
 
@@ -565,11 +568,13 @@ class MCMCAdapt(Adapter):
             # plot everything
             with open("plot_data.pkl", "wb") as fp:
                 pickle.dump(plot_data["progress"], fp)
+            '''
             total_reward_plotter.update_graph(plot_data["rewards"])
             progress_plotter.update_graph(plot_data["progress"])
             cost_plotter.update_graph(plot_data["cost"])
             prop_plotter.update_graph(plot_data["props"])
             distance_plotter.update_graph(plot_data["distances"])
+            '''
 
             print("MCMC steps: {}".format(i))
             # write to the logfile

@@ -177,17 +177,16 @@ class Controller:
         self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
+        # export the interaction
+        exporter = TSExporter(self.TS, self.json_data)
+        exporter.export("result_files", mod_tracker)
+
         with open("trajectories_used_for_learning.pkl", "wb") as fp:
             pickle.dump(self.consolidated_trajs, fp)
         with open("trajectories.pkl", "wb") as fp:
             pickle.dump(self.trajs, fp)
         with open("correctness_trajs.pkl", "wb") as fp:
             pickle.dump(correctness_trajs, fp)
-
-
-        # export the interaction
-        exporter = TSExporter(self.TS, self.json_data)
-        exporter.export("result_files", mod_tracker)
 
         #with open("TS.txt", "wb") as fp:
         #    fp.write(self.TS)
