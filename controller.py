@@ -5,6 +5,7 @@ from copy import deepcopy
 from interaction_components import *
 from mcmc_repair import *
 from z3_adapt import *
+from bfsadapt import *
 from json_exporter import *
 from verification.prism_util import *
 from reader import *
@@ -223,6 +224,25 @@ class Controller:
 
         z3 = Z3Adapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
         self.TS, st_reachables, correctness_trajs = z3.adapt()
+        self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
+
+        # POSSIBLY write the correctness trajs to a correctness.pkl file
+
+    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
+
+        plot_data = { "rewards": [],
+                      "progress": [],
+                      "cost": [],
+                      "props": [],
+                      "distances": [],
+                      "time": []
+                    }
+
+        #for i in range(2):
+        #print("Day {}".format(i))
+
+        bfs = BFSAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
+        self.TS, st_reachables, correctness_trajs = bfs.adapt()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file

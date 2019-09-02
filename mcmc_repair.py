@@ -36,7 +36,7 @@ class MCMCAdapt(Adapter):
 
         self.setup_helper = SMTSetup()
 
-        self.localize_faults(combined_raw_trajs)
+        self.localize_faults(self.trajs)
 
     def get_correct_mutations(self, num_additions, num_deletions, raw_trajs):
 
@@ -289,18 +289,6 @@ class MCMCAdapt(Adapter):
 
         return L_pos, abs_min, abs_max
 
-    def create_cond_dict(self, TS):
-        # create a dictionary of dict[source_state][condition] = target_state
-        cond_dict = {}
-        ts_states = TS.states
-        for state_name in ts_states:
-            state = ts_states[state_name]
-            cond_dict[state] = {}
-            for out_trans in state.out_trans:
-                cond_dict[state][out_trans.condition] = out_trans.target
-
-        return cond_dict
-
     def adapt(self, num_itr, total_reward_plotter, progress_plotter, cost_plotter, prop_plotter, distance_plotter, plot_data):
         start_time = time.time()
 
@@ -415,7 +403,7 @@ class MCMCAdapt(Adapter):
             num_itr_outside_state_space = 0
             lim_itr_outside_state_space = 200
             best_distance = distance
-            max_time_allowed = 32400  # 9 hours
+            max_time_allowed = 36000  # 9 hours
             start_time = time.time()
             model_checker_avoided_being_called = 0
             checking_point = True if eq_cost == 0 else False
@@ -503,8 +491,8 @@ class MCMCAdapt(Adapter):
                     alpha = 0.001
                 u = np.random.random()
 
-                #if proposed_eqcost_nonzero:
-                #    print("perf {} -- eq {} -- pre {} -- post {} ==== [{}]".format(perf_cost, eq_cost, precost, postcost, alpha))
+                if proposed_eqcost_nonzero:
+                    print("           perf {} -- eq {} -- pre {} -- post {} ==== [{}]".format(perf_cost, eq_cost, precost, postcost, alpha))
 
                 # accept or reject
                 if u > alpha and self.algorithm=="mcmc":  # reject
@@ -1477,7 +1465,7 @@ class MCMCAdapt(Adapter):
 
         #eq_cost = (10**len(curr_violations))-1
         #eq_cost = (10*len(eq_vect))
-        eq_cost = len(eq_vect)
+        eq_cost = (len(eq_vect)*2)**2
         #print("{} -  cost: {}".format(len(eq_vect), eq_cost))
 
         #eq_cost = ((10**(len(curr_violations)**1.3))-1)*1.0/((10**(self.num_properties**1.3))-1)

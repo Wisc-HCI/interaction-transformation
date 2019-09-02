@@ -16,13 +16,16 @@ class Z3Adapt(Adapter):
 
         self.setup_helper = SMTSetup()
 
-        self.localize_faults(combined_raw_trajs)
+        self.localize_faults(self.trajs)
 
     def adapt(self):
 
         # get the set of moddable_sts
         self.moddable_sts = self.determine_modifiable_states(self.TS)
         self.moddable_trans = self.determine_modifiable_transitions(self.TS)
+
+        for trans in self.moddable_trans:
+            print(str(trans))
 
         # create mapping of state2id
         self.state2id = {self.TS.init: 0}
@@ -54,6 +57,18 @@ class Z3Adapt(Adapter):
             self.input2id[inp] = idx
             idx += 1
 
+        # create a mapping of each microinteraction to all the states it could possible reside in
+        self.micro2states = {}
+        for micro in self.micro2id:
+            self.micro2states[micro] = []
+            for state in self.state2id:
+                if state in self.moddable_sts:
+                    self.micro2states[micro].append(state)
+                else:
+                    if state.micros[0]["name"] == micro:
+                        self.micro2states[micro].append(state)
+
+        '''
         # bitvector that decides whether a trajectory is included or not
         B = {}
         for i in range(len(self.trajs)):
@@ -62,6 +77,7 @@ class Z3Adapt(Adapter):
 
         # calculate score of each trajectory
         self.score = self.simple_score()
+        '''
 
         # function that maps states + inputs to states
         f_T = Function("f_T",IntSort(), IntSort(),IntSort())
@@ -71,20 +87,21 @@ class Z3Adapt(Adapter):
         # set transitions and micros based on their current id
         setup_constraints = self.setup_TS(f_T,f_M)
 
+        # setup score variable
+        scores = [Int("score_{}".format(i)) for i in range(len(self.trajs))]
+
         # trajectory constraints
         traj_constraints = And(True)
         for i in range(len(self.trajs)):
             traj = self.trajs[i]
-            single_traj_constraint = self.make_traj_constraint(traj,i,f_T,f_M,B)
-            traj_constraints = And(traj_constraints, single_traj_constraint)
+            #if not traj.is_prefix:
+            single_traj_constraint, traj_hard_constraint = self.make_traj_constraint(traj,i,f_T,f_M,scores[i])
+            traj_constraints = And(traj_constraints, single_traj_constraint, traj_hard_constraint)
 
         # add all constraints together
-        constraints = And(setup_constraints)
+        constraints = And(setup_constraints,traj_constraints)
 
-        objective = 0
-        print("SOLVER --> num trajs: {}".format(len(self.trajs)))
-        for traj in self.trajs:
-            objective += B[traj] * self.score[traj]
+        objective = Sum(scores)
 
         print("SOLVER --> setting up optimization problem")
         o = Optimize()
@@ -102,6 +119,19 @@ class Z3Adapt(Adapter):
 
             o.upper(h)
             m = o.model()
+            for i in range(len(self.trajs)):
+                traj = self.trajs[i]
+                #if not traj.is_prefix:
+                print("{} - {}".format(m.evaluate(scores[i]),traj.reward))
+            print(m.evaluate(objective))
+            #for st,idx in self.state2id.items():
+            #    print("state {} is {}".format(st,idx))
+            #for inp,idx in self.input2id.items():
+            #    print("input {} is {}".format(inp,idx))
+            #for i in self.state2id_rev:
+            #    for j in self.input2id_rev:
+            #        print("f_T {}+{}={}".format(i,j,m.evaluate(f_T(i,j))))
+            #    print("f_M {}={}".format(i,m.evaluate(f_M(i))))
             self.build_TS_from_solution(self.TS,m,f_M,f_T)
 
         else:
@@ -118,7 +148,12 @@ class Z3Adapt(Adapter):
             if state_micro_id == -1:
                 continue
             state_micro = self.micro2id_rev[state_micro_id]
-            state_name = state_micro  # make this unique!
+            state_name = state_micro
+
+            # ensure state_name is unique
+            while state_name in states:
+                state_name = state_name+"0"
+
             new_state = State(state_name,str(id),state_micro)
             if old_TS.init == state_orig:
                 init = new_state
@@ -142,28 +177,66 @@ class Z3Adapt(Adapter):
 
         # create TS
         new_TS = TS(states,transitions,init)
+        for state_name,state in states.items():
+            print(str(state))
+        for source_id,tar_dict in self.TS.transitions.items():
+            for target_id,trans_list in tar_dict.items():
+                for trans in trans_list:
+                    print(str(trans))
 
         # link everything together
         SMUtil().build(new_TS.transitions, new_TS.states)
 
         print(str(new_TS))
 
-    def make_traj_constraint(self,traj,id,f_T,f_M,B):
+    def make_traj_constraint(self,traj,id,f_T,f_M,score):
         traj_constraint = And(True)
+        hard_constraint = And(True)
 
         exists_within = And(True)
-        sts = ["traj_st_{}_{}".format(id,i) for i in range(len(traj.vect))+1]
+        sts = [Int("traj_st_{}_{}".format(id,i)) for i in range(len(traj.vect))]
+        hard_constraint = And(hard_constraint,sts[0]==0)
+        for st in sts:
+            hard_constraint = And(hard_constraint,And(st>-1,st<len(self.state2id)))
         vect = traj.vect
-        for i in range(len(vect)-1):
-            condition_id = self.micro2id[vect[i+1][0].type]
-            exists_within = And(exists_within,f_T(sts[i]))
 
-        traj_constraint = And(traj_constraint,Implies(exists_within,B[traj]==1))
-        traj_constraint = And(traj_constraint,Implies(B[traj]==1,exists_within))
-        traj_constraint = And(traj_constraint,Implies(Not(exists_within),B[traj]==0))
-        traj_constraint = And(traj_constraint,Implies(B[traj]==0,Not(exists_within)))
+        # calculate more restrictions on sts
+        for i in range(len(vect)):
+            v = vect[i]
+            if v[1].type != "END":
+                or_const_micro = Or(False)
+                for state_option in self.micro2states[v[1].type]:
+                    or_const_micro = Or(or_const_micro,sts[i]==self.state2id[state_option])
+                hard_constraint = And(hard_constraint,or_const_micro)
 
-        return traj_constraint
+        if not traj.is_prefix:
+            #print("\n~~~~~~~~")
+            print(str(traj))
+            for i in range(len(vect)-2):
+                #print("{} ++ {}".format(vect[i][0].type,vect[i][1].type))
+                condition_id = self.input2id[vect[i+1][0].type]
+                exists_within = And(exists_within,f_T(sts[i],condition_id)==sts[i+1])
+                exists_within = And(exists_within,f_M(sts[i])==self.micro2id[vect[i][1].type])
+            end_condition_id = self.input2id[vect[-1][0].type]
+            exists_within = And(exists_within,f_T(sts[len(vect)-2],end_condition_id)==-1)
+            exists_within = And(exists_within,f_M(sts[len(vect)-2])==self.micro2id[vect[len(vect)-2][1].type])
+        else:
+            print(str(traj))
+            for i in range(len(vect)-1):
+                condition_id = self.input2id[vect[i+1][0].type]
+                exists_within = And(exists_within,f_T(sts[i],condition_id)==sts[i+1])
+                exists_within = And(exists_within,f_M(sts[i])==self.micro2id[vect[i][1].type])
+            exists_within = And(exists_within,f_M(sts[len(vect)-1])==self.micro2id[vect[len(vect)-1][1].type])
+
+        int_reward = int(round(traj.reward*100))
+        traj_constraint = And(traj_constraint,Implies(exists_within,score==int_reward))
+        traj_constraint = And(traj_constraint,Implies(score==int_reward,exists_within))
+        traj_constraint = And(traj_constraint,Implies(Not(exists_within),score==0))
+        traj_constraint = And(traj_constraint,Implies(score==0,Not(exists_within)))
+
+        #traj_constraint = And(traj_constraint,score==traj.reward)
+
+        return traj_constraint,hard_constraint
 
     def setup_TS(self,f_T,f_M):
         setup_constraints = And(True)
@@ -191,7 +264,7 @@ class Z3Adapt(Adapter):
                     setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)==target_id)
                 else: # it is in moddable_trans
                     setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)>-1)
-                    setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)<=self.max_state_id)
+                    #setup_constraints = And(setup_constraints, f_T(source_state_id,cons_id)<=self.max_state_id)
 
         # STATES
         for state_name,state in self.TS.states.items():
@@ -217,7 +290,11 @@ class Z3Adapt(Adapter):
                 setup_constraints = And(setup_constraints,orblock)
 
         # place bounds
-
+        for i in self.state2id_rev:
+            setup_constraints = And(setup_constraints,f_M(i)>=-1,f_M(i)<len(self.micro2id))
+        for i in self.state2id_rev:
+            for j in self.input2id_rev:
+                setup_constraints = And(setup_constraints,f_T(i,j)>=-1,f_T(i,j)<len(self.state2id))
 
         # handle the -1's
         setup_constraints = And(setup_constraints,f_M(-1)==-1)

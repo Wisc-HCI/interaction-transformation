@@ -32,6 +32,8 @@ class App(QMainWindow):
                         action="store_true")
         parser.add_argument("-s", "--smt", help="run smt",
                         action="store_true")
+        parser.add_argument("-b", "--bfs", help="run bfs",
+                        action="store_true")
         parser.add_argument("-n",  "--nogui", help="run without gui",
                         action="store_true")
         args = parser.parse_args(sys.argv[2:])
@@ -43,6 +45,8 @@ class App(QMainWindow):
             self.algorithm="random"
         if args.smt:
             self.algorithm="smt"
+        if args.bfs:
+            self.algorithm="bfs"
 
         self.title = 'Repair Progress'
         desktop = QApplication.desktop()
@@ -131,6 +135,8 @@ class App(QMainWindow):
             self.adapt_button.clicked.connect(self.random_adapt)
         elif self.algorithm == "smt":
             self.adapt_button.clicked.connect(self.z3_adapt)
+        elif self.algorithm == "bfs":
+            self.adapt_button.clicked.connect(self.bfs_adapt)
 
         # the add trajectories button
         self.traj_build_button = QPushButton("Traj Build", self.control_buttons)
@@ -256,6 +262,11 @@ class App(QMainWindow):
 
     def z3_adapt(self):
         self.adapter.z3_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
+        #self.json_exp.export_from_z3(solution)
+        self.load_graph()
+
+    def bfs_adapt(self):
+        self.adapter.bfs_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
         #self.json_exp.export_from_z3(solution)
         self.load_graph()
 

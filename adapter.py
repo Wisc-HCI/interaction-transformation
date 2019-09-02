@@ -207,6 +207,7 @@ class Adapter:
 
         print(self.transition_faults)
 
+        # get the faults
         for source_id, tar_dict in TS.transitions.items():
             for target_id, trans_dict in tar_dict.items():
                 for trans in trans_dict:
@@ -221,9 +222,39 @@ class Adapter:
                     else:
                         scores[score].append(trans)
 
-        sorted_scores = sorted(list(scores.keys()))
+        # get the potentials
+        # aka look at the transition faults with the most positive scores, but that point to different locations
+        #positive_scores = {}
+        for tup,score in self.transition_faults.items():
+            for source_id,tardict in TS.transitions.items():
+                for target_id, trans_list in tardict.items():
+                    for trans in trans_list:
+                        if trans.source.micros[0]["name"] == tup[0] and trans.condition == tup[1] and trans.target.micros[0]["name"] != tup[2]:
+                            if score not in scores:
+                                scores[score] = [trans]
+                            else:
+                                scores[score].append(trans)
 
+        sorted_scores = sorted(list(scores.keys()))
+        sorted_positive_scores = sorted(list(scores.keys()), reverse=True)
+
+        # discard scores past 0
         '''
+        to_remove = []
+        for score in sorted_scores:
+            if score >= 0:
+                to_remove.append(score)
+        for score in to_remove:
+            sorted_scores.remove(score)
+
+        to_remove = []
+        for score in sorted_positive_scores:
+            if score <= 0:
+                to_remove.append(score)
+        for score in to_remove:
+            sorted_positive_scores.remove(score)
+        '''
+
         # remove the transitions in which changes would cause a property violation
         # remove the states in which changes would cause a property violation
         mod_tracker = ModificationTracker()
@@ -282,10 +313,10 @@ class Adapter:
         for score in scores_to_remove:
             scores.pop(score)
             sorted_scores.remove(score)
+            sorted_positive_scores.remove(score)
 
         #for sttt in self.modstate2availstates:
         #    print("{} -- {}".format(str(sttt),self.modstate2availstates[sttt]))
-        '''
 
 
         '''
@@ -299,25 +330,57 @@ class Adapter:
         exit()
         '''
 
-        i = 0
+        the_scores = []
+
         j = 0
-        curr_score = sorted_scores[j]
+        curr_negative_score = sorted_scores[j]
+
+        m = 0
+        curr_positive_score = sorted_positive_scores[m]
+
+        curr_score = curr_negative_score if abs(curr_negative_score) > curr_positive_score else curr_positive_score
+        #curr_score_dict = scores if abs(curr_negative_score) > curr_positive_score else positive_scores
         to_break = False
+        i = 0
         while True:
             if to_break:
                 break
             for trans in scores[curr_score]:
 
-                modifiable_trans.append(trans)
-                i += 1
+                if trans in modifiable_trans:
+                    print("skipping, as in modifiable trans")
+                else:
+                    modifiable_trans.append(trans)
+                    the_scores.append(curr_score)
 
-                if i >= self.mod_limit:
-                    to_break = True
-                    break
-            j += 1
-            if j >= len(sorted_scores):
+                    i += 1
+
+                    if i >= self.mod_limit:
+                        to_break = True
+                        break
+
+            # increment score idx
+            if curr_score == curr_positive_score:
+                m += 1
+                curr_positive_score = sorted_positive_scores[m]
+            else:
+                j += 1
+                curr_negative_score = sorted_scores[j]
+
+            if j >= len(sorted_scores) and m >= len(sorted_positive_scores):
                 break
-            curr_score = sorted_scores[j]
+            elif j >= len(sorted_scores):
+                curr_score = curr_positive_score
+            elif m >= len(sorted_positive_scores):
+                curr_score = curr_negative_score
+            else:
+                curr_score = curr_negative_score if abs(curr_negative_score) > curr_positive_score else curr_positive_score
+                #curr_score_dict = scores if abs(curr_negative_score) > curr_positive_score else positive_scores
+            #curr_score = sorted_scores[j]
+
+        for i in range(len(modifiable_trans)):
+            print("score {}, {}".format(the_scores[i],str(modifiable_trans[i])))
+        #exit()
 
         return modifiable_trans
 
@@ -395,6 +458,18 @@ class Adapter:
                 break
             count += 1
         return "{}{}".format(name,count)
+
+    def create_cond_dict(self, TS):
+        # create a dictionary of dict[source_state][condition] = target_state
+        cond_dict = {}
+        ts_states = TS.states
+        for state_name in ts_states:
+            state = ts_states[state_name]
+            cond_dict[state] = {}
+            for out_trans in state.out_trans:
+                cond_dict[state][out_trans.condition] = (out_trans.target,out_trans)
+
+        return cond_dict
 
     def build_trajectory(self, rawinput, states, reward, output_mapping, is_prefix=False, counter=-1):
         traj_vect = []
