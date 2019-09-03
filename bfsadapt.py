@@ -249,20 +249,30 @@ class BFSAdapt(Adapter):
 
         curr_dict = max_rew_info
         for i in range(len(ordered)):
-            ordered_trans = ordered[i]
-            if ordered_trans not in curr_dict["tree"]:
-                curr_dict["tree"][ordered_trans] = {}
-            if ordered_trans.target not in curr_dict["tree"][ordered_trans]:
+            ordered_moddable = ordered[i]
+
+            # determine whether state or not
+            is_state = False
+            if ordered_moddable in self.moddable_sts:
+                is_state = True
+
+            if ordered_moddable not in curr_dict["tree"]:
+                curr_dict["tree"][ordered_moddable] = {}
+
+            if not is_state: # if moddable is a transition
+                ordered_moddable_target = ordered_moddable.target
+            else:
+                ordered_moddable_target = ordered_moddable.micros[0]["name"]
+
+            if ordered_moddable_target not in curr_dict["tree"][ordered_moddable]:
                 if i == len(ordered) - 1:
-                    curr_dict["tree"][ordered_trans][ordered_trans.target] = {"tree":{},"score":potential_score}
+                    curr_dict["tree"][ordered_moddable][ordered_moddable_target] = {"tree":{},"score":potential_score}
                 else:
-                    curr_dict["tree"][ordered_trans][ordered_trans.target] = {"tree":{},"score":None}
+                    curr_dict["tree"][ordered_moddable][ordered_moddable_target] = {"tree":{},"score":None}
             else:
                 if i == len(ordered) - 1:
-                    curr_dict["tree"][ordered_trans][ordered_trans.target]["score"] = potential_score
-            curr_dict = curr_dict["tree"][ordered_trans][ordered_trans.target]
-
-        #self.pretty_print_max_rew_info(max_rew_info)
+                    curr_dict["tree"][ordered_moddable][ordered_moddable_target]["score"] = potential_score
+            curr_dict = curr_dict["tree"][ordered_moddable][ordered_moddable_target]
 
     def pretty_print_max_rew_info(self,max_rew_info):
 
