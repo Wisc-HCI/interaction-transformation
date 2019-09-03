@@ -157,7 +157,7 @@ class BFSAdapt(Adapter):
                                                          # counterexamples produced, # correct interactions found,
                                                          # counterexamples used, # branches pruned, # counter pruned]
 
-            self.modify(curr_depth=0,upto=depth,TS=TS,best_program=best_program,depth_stats=depth_stats[depth],already_modified=[],moddable_order=moddable_order,max_rew_info=max_reward_info,timing_vals=timing_vals)
+            self.modify(curr_depth=0,upto=depth,depth_cap=depth_cap,TS=TS,best_program=best_program,depth_stats=depth_stats[depth],already_modified=[],moddable_order=moddable_order,max_rew_info=max_reward_info,timing_vals=timing_vals)
 
             print("finished depth={}".format(depth))
             print("   # iterations: {}".format(depth_stats[depth][0]))
@@ -197,7 +197,7 @@ class BFSAdapt(Adapter):
 
         return best_program[0], st_reachable, correctness_trajs
 
-    def modify(self,curr_depth,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals=None):
+    def modify(self,curr_depth,upto,depth_cap,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals=None):
 
         if curr_depth == upto:
             # we call this an iteration
@@ -217,22 +217,22 @@ class BFSAdapt(Adapter):
             new_sum_reward = sum(unweighted_rew_vect)
             pt_end = time.time()
 
-            always_sat_score,sat_always = path_traversal.get_always_satisfied_score()
-            #print("always_sat: {}".format(always_sat_score))
-            maybe_sat_positive_score = path_traversal.get_maybe_satisfied_positive_score(self.traj_prefix_dict)
-            #print("maybe_sat: {}".format(maybe_sat_positive_score))
-            if sat_always:
-                potential_score = always_sat_score + maybe_sat_positive_score
-            else:
-                depth_stats[6] += 1
-                potential_score = -1
-            timing_vals[0] += (pt_end-pt_start)
+            # set up branch pruning for future major iterations
+            if curr_depth != depth_cap: # it would be pointless to do this at the highest level, and a waste of time
+                always_sat_score,sat_always = path_traversal.get_always_satisfied_score()
+                maybe_sat_positive_score = path_traversal.get_maybe_satisfied_positive_score(self.traj_prefix_dict)
+                if sat_always:
+                    potential_score = always_sat_score + maybe_sat_positive_score
+                else:
+                    depth_stats[6] += 1
+                    potential_score = -1
+                timing_vals[0] += (pt_end-pt_start)
 
-            # store the potential score
-            #ss_start = time.time()
-            self.store_score(max_rew_info,moddable_order,already_modified,potential_score)
-            #ss_end = time.time()
-            #timing_vals[1] += (ss_end-ss_start)
+                # store the potential score
+                #ss_start = time.time()
+                self.store_score(max_rew_info,moddable_order,already_modified,potential_score)
+                #ss_end = time.time()
+                #timing_vals[1] += (ss_end-ss_start)
 
             if len(eq_vect) > 0:
                 depth_stats[4] += 1
@@ -307,7 +307,7 @@ class BFSAdapt(Adapter):
                             depth_stats[5] += 1
                         else:
                             # call modify again with a new modification
-                            self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
+                            self.modify(curr_depth+1,upto,depth_cap,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
 
                         # undo the modification just made
                         self.modifier.undo_state_mod(TS,undoable,cond_dict=self.cond_dict)
@@ -332,7 +332,7 @@ class BFSAdapt(Adapter):
                             depth_stats[5] += 1
                         else:
                             # call modify again with a new modification
-                            self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
+                            self.modify(curr_depth+1,upto,depth_cap,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
 
                         # undo the modification we just made
                         self.modifier.undo_trans_mod(TS,undoable,cond_dict=self.cond_dict)
