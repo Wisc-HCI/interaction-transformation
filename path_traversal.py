@@ -65,11 +65,7 @@ class PathTraversal:
 
             # double check that full trajectories ended
             if sat and not traj.is_prefix:
-                print(traj)
-                print(str(curr_st))
-                print(can_end_arr)
                 if curr_st not in can_end_arr:
-                    print("TRUE")
                     sat = False
                     trajectory_status[traj] = (traj.reward,False)
                 '''

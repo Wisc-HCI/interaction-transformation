@@ -1,4 +1,6 @@
 import time
+import copy
+import random
 
 from path_traversal import *
 from mod_tracker import *
@@ -264,10 +266,14 @@ class BFSAdapt(Adapter):
                 is_correct = False
             return
 
+        # shuffle moddable_all
+        local_moddable_all = copy.copy(self.moddable_all)
+        random.shuffle(local_moddable_all)
+
         # make a modification
         prunect = 0
         # progress through the trans mods, followed by the state mods
-        for moddable in self.moddable_all:
+        for moddable in local_moddable_all:
 
             if self.timeout is not None and self.timeout <= time.time() - self.start_time:
                 break
@@ -284,7 +290,11 @@ class BFSAdapt(Adapter):
                 # make the state modification
                 # # # # # # # # # # # # # # # #
                 if is_state:
-                    for target in self.micro_selection:
+
+                    local_micro_selection = copy.copy(self.micro_selection)
+                    random.shuffle(local_micro_selection)
+
+                    for target in local_micro_selection:
 
                         # make the modification
                         state_name = self.get_unused_name(target["name"], TS)
@@ -306,7 +316,11 @@ class BFSAdapt(Adapter):
                 # else make the transition modification
                 # # # # # # # # # # # # # # # #
                 else:
-                    for target in self.all_states:
+
+                    local_state_selection = copy.copy(self.all_states)
+                    random.shuffle(local_state_selection)
+
+                    for target in local_state_selection:
 
                         # make the modification
                         undoable = self.modifier.trans_mod(TS,moddable,target,cond_dict=self.cond_dict)
