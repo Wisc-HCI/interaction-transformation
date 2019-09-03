@@ -193,33 +193,44 @@ class BFSAdapt(Adapter):
         # make a modification
         prunect = 0
         # progress through the trans mods, followed by the state mods
-        for trans in self.moddable_trans:
-            if trans not in already_modified:
-                already_modified.append(trans)
-                for target in self.all_states:
+        for moddable in self.moddable_all:
 
-                    # ensure we don't make a modification to ourselves
-                    #if trans.target != target:
+            # determine if transition or state
+            is_state = False
+            if moddable in self.moddable_sts:
+                is_state = True
 
-                    # make the modification
-                    #mod_start = time.time()
-                    undoable = self.modifier.trans_mod(TS,trans,target,cond_dict=self.cond_dict)
+            if moddable not in already_modified:
+                already_modified.append(moddable)
 
-                    # prune branches with low reward
-                    ordered = self.get_ordered_modifications(moddable_order,already_modified)
-                    seent,rew = self.check_mod_possible_reward(ordered,max_rew_info)
-                    if seent and rew <= best_program[1]:
-                        #print("pruned branch with possible reward {} whereas max reward is already {}".format(rew,best_program[1]))
-                        depth_stats[5] += 1
-                    else:
-                        # call modify again with a new modification
-                        self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
+                # # # # # # # # # # # # # # # #
+                # make the state modification
+                # # # # # # # # # # # # # # # #
+                if is_state:
+                    pass
 
-                    # undo the modification we just made
-                    self.modifier.undo_trans_mod(TS,undoable,cond_dict=self.cond_dict)
-                    #mod_end = time.time()
-                    #timing_vals[2] += (mod_end-mod_start)
-                already_modified.remove(trans)
+                # # # # # # # # # # # # # # # #
+                # else make the transition modification
+                # # # # # # # # # # # # # # # #
+                else:
+                    for target in self.all_states:
+
+                        # make the modification
+                        undoable = self.modifier.trans_mod(TS,moddable,target,cond_dict=self.cond_dict)
+
+                        # prune branches with low reward
+                        ordered = self.get_ordered_modifications(moddable_order,already_modified)
+                        seent,rew = self.check_mod_possible_reward(ordered,max_rew_info)
+                        if seent and rew <= best_program[1]:
+                            depth_stats[5] += 1
+                        else:
+                            # call modify again with a new modification
+                            self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
+
+                        # undo the modification we just made
+                        self.modifier.undo_trans_mod(TS,undoable,cond_dict=self.cond_dict)
+
+                already_modified.remove(moddable)
 
         # make a state modification
         # progress through the state mods
@@ -283,21 +294,19 @@ class BFSAdapt(Adapter):
         curr_dict = max_rew_info
         seent = True
         for ord in ordered:
-            #print(str(ord))
             if ord not in curr_dict["tree"]:
-                #print("  not in curr dict")
                 seent = False
                 break
             elif ord.target not in curr_dict["tree"][ord]:
-                #print("  ord.target {} not in curr dict".format(ord.target))
                 seent = False
                 break
-            #print("  TRANS AND STATE ARE IN THE CURR DICT")
-            curr_dict = curr_dict["tree"][ord][ord.target]
+
+            if ord in self.moddable_trans:
+                curr_dict = curr_dict["tree"][ord][ord.target]
+            else:
+                curr_dict = curr_dict["tree"][ord][ord.micros[0]["name"]]
 
         if seent:
-            #print("seent! rew={}".format(curr_dict["score"]))
             return seent,curr_dict["score"]
         else:
-            #print("no seent...")
             return seent,False
