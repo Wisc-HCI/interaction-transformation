@@ -15,6 +15,7 @@ class BFSAdapt(Adapter):
         self.freqs = freqs
         self.micro_selection = micro_selection
         self.path_to_interaction = path_to_interaction
+        self.update_trace_panel = updated_trace_panel
 
         self.setup_helper = SMTSetup()
         self.modifier = Modifier()
@@ -81,10 +82,10 @@ class BFSAdapt(Adapter):
         self.lock=lock
 
         # get the set of moddable_sts
-        self.lock.acquire()
+        self.acquire_lock(self.lock)
         moddable_sts = self.determine_modifiable_states(self.TS)
         moddable_trans = self.determine_modifiable_transitions(self.TS)
-        self.lock.release()
+        self.release_lock(self.lock)
 
         # import property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
@@ -122,9 +123,9 @@ class BFSAdapt(Adapter):
             counter += 1
 
         # define the current reward
-        self.lock.acquire()
+        self.acquire_lock(self.lock)
         new_eq_vect = self.model_check(TS, self.removed_transitions, self.property_checker, [], [[]], append_correctness_traj=False)
-        self.lock.release()
+        self.release_lock(self.lock)
         eq_cost = len(new_eq_vect)
 
         if eq_cost == 0:
@@ -171,15 +172,21 @@ class BFSAdapt(Adapter):
 
         print("seconds passed is {}".format(end_time-local_start_time))
 
+        # duplicate the transitions in removed:
+        removed_transitions = [best_program[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in self.removed_transitions]
+
         SMUtil().build(best_program[0].transitions, best_program[0].states)
         st_reachable = {}
         for state in best_program[0].states.values():
-            rc = ReachabilityChecker(best_program[0], self.inputs, self.outputs, self.removed_transitions)
+            rc = ReachabilityChecker(best_program[0], self.inputs, self.outputs, removed_transitions)
             st_reachable[state.name] = True
             if st_reachable[state.name] == False:
                 print("state {} is unreachable".format(state.name))
-        path_traversal = PathTraversal(best_program[0], self.trajs, self.freqs, self.removed_transitions)
-        path_traversal.check([],[], {})
+        path_traversal = PathTraversal(best_program[0], self.trajs, self.freqs, removed_transitions)
+        traj_status = {}
+        path_traversal.check([],[], traj_status)
+        if self.update_trace_panel is not None:
+            self.update_trace_panel(traj_status)
 
         correctness_trajs = []
         for traj in self.trajs:
@@ -235,14 +242,12 @@ class BFSAdapt(Adapter):
 
                 # double check with the model checker
                 # define the current reward
-                if self.lock is not None:
-                    self.lock.acquire()
+                self.acquire_lock(self.lock)
                 new_eq_vect = self.model_check(TS, self.removed_transitions, self.property_checker, [], [[]], append_correctness_traj=True)
                 eq_cost = len(new_eq_vect)
                 depth_stats[1] += 1
                 depth_stats[2] += eq_cost
-                if self.lock is not None:
-                    self.lock.release()
+                self.release_lock(self.lock)
 
                 if eq_cost == 0:
 
@@ -411,3 +416,11 @@ class BFSAdapt(Adapter):
             return seent,curr_dict["score"]
         else:
             return seent,False
+
+    def acquire_lock(self,lock):
+        if lock is not None:
+            lock.acquire()
+
+    def release_lock(self,lock):
+        if lock is not None:
+            lock.release()

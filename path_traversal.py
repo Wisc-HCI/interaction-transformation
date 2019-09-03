@@ -38,6 +38,7 @@ class PathTraversal:
             sat = True
             if vect[0][1].type != self.TS.init.micros[0]["name"]:
                 sat = False
+                trajectory_status[traj] = (traj.reward,False)
                 continue
 
             curr_st = self.TS.init
@@ -59,12 +60,18 @@ class PathTraversal:
                     if always_satisfied:
                         never_satisfied = True
                     always_satisfied = False
+                    trajectory_status[traj] = (traj.reward,False)
                     break
 
             # double check that full trajectories ended
             if sat and not traj.is_prefix:
+                print(traj)
+                print(str(curr_st))
+                print(can_end_arr)
                 if curr_st not in can_end_arr:
+                    print("TRUE")
                     sat = False
+                    trajectory_status[traj] = (traj.reward,False)
                 '''
                 can_end = False
                 for trans in self.removed_transitions:
@@ -75,6 +82,7 @@ class PathTraversal:
                 '''
 
             if sat:
+                trajectory_status[traj] = (traj.reward,True)
                 if traj.is_correctness:
                     eqs.append(traj)
                 else:

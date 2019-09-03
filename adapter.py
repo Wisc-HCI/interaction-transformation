@@ -175,6 +175,10 @@ class Adapter:
         for sttt in self.modstate2availstates:
             print("{} -- {}".format(str(sttt),self.modstate2availstates[sttt]))
 
+        # no states are modifiable
+        if len(sorted_scores) < 1:
+            return []
+
         i = 0
         j = 0
         curr_score = sorted_scores[j]
@@ -333,12 +337,19 @@ class Adapter:
         the_scores = []
 
         j = 0
-        curr_negative_score = sorted_scores[j]
+        curr_negative_score = sorted_scores[j] if len(sorted_scores) > 0 else None
 
         m = 0
-        curr_positive_score = sorted_positive_scores[m]
+        curr_positive_score = sorted_positive_scores[m] if len(sorted_positive_scores) > 0 else None
 
-        curr_score = curr_negative_score if abs(curr_negative_score) > curr_positive_score else curr_positive_score
+        if curr_negative_score is None and curr_positive_score is None:
+            return []
+        elif curr_negative_score is None:
+            curr_score = curr_positive_score
+        elif curr_positive_score is None:
+            curr_score = curr_negative_score
+        else:
+            curr_score = curr_negative_score if abs(curr_negative_score) > curr_positive_score else curr_positive_score
         #curr_score_dict = scores if abs(curr_negative_score) > curr_positive_score else positive_scores
         to_break = False
         i = 0
@@ -362,10 +373,10 @@ class Adapter:
             # increment score idx
             if curr_score == curr_positive_score:
                 m += 1
-                curr_positive_score = sorted_positive_scores[m]
+                curr_positive_score = sorted_positive_scores[m] if m < len(sorted_positive_scores) else None
             else:
                 j += 1
-                curr_negative_score = sorted_scores[j]
+                curr_negative_score = sorted_scores[j] if j < len(sorted_scores) else None
 
             if j >= len(sorted_scores) and m >= len(sorted_positive_scores):
                 break
