@@ -207,7 +207,23 @@ class BFSAdapt(Adapter):
                 # make the state modification
                 # # # # # # # # # # # # # # # #
                 if is_state:
-                    pass
+                    for target in self.micro_selection:
+
+                        # make the modification
+                        state_name = self.get_unused_name(target["name"], TS)
+                        undoable = self.modifier.state_mod(TS,moddable,state_name,target,cond_dict=self.cond_dict)
+
+                        # prune branches with low reward
+                        ordered = self.get_ordered_modifications(moddable_order,already_modified)
+                        seent,rew = self.check_mod_possible_reward(ordered,max_rew_info)
+                        if seent and rew <= best_program[1]:
+                            depth_stats[5] += 1
+                        else:
+                            # call modify again with a new modification
+                            self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
+
+                        # undo the modification just made
+                        self.modifier.undo_state_mod(TS,undoable,cond_dict=self.cond_dict)
 
                 # # # # # # # # # # # # # # # #
                 # else make the transition modification
@@ -304,17 +320,20 @@ class BFSAdapt(Adapter):
         curr_dict = max_rew_info
         seent = True
         for ord in ordered:
+
+            if ord in self.moddable_trans:
+                ord_target = ord.target
+            else:
+                ord_target = ord.micros[0]["name"]
+
             if ord not in curr_dict["tree"]:
                 seent = False
                 break
-            elif ord.target not in curr_dict["tree"][ord]:
+            elif ord_target not in curr_dict["tree"][ord]:
                 seent = False
                 break
 
-            if ord in self.moddable_trans:
-                curr_dict = curr_dict["tree"][ord][ord.target]
-            else:
-                curr_dict = curr_dict["tree"][ord][ord.micros[0]["name"]]
+            curr_dict = curr_dict["tree"][ord][ord_target]
 
         if seent:
             return seent,curr_dict["score"]
