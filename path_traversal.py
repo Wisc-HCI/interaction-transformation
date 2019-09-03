@@ -22,9 +22,10 @@ class PathTraversal:
                 for out_trans in state.out_trans:
                     cond_dict[state][out_trans.condition] = (out_trans.target,out_trans)
 
-        #sats = []
-        #probs = []
-        #trajectory_status = {}
+        can_end_arr = []
+        for trans in self.removed_transitions:
+            can_end_arr.append(trans.source)
+
         for traj in self.trajectories:
 
             # will we ALWAYS satisfy this trajectory given the modifiable states and
@@ -35,11 +36,8 @@ class PathTraversal:
             vect = traj.vect
 
             sat = True
-            probability = 1
             if vect[0][1].type != self.TS.init.micros[0]["name"]:
-                #print("unsat -- init")
                 sat = False
-                trajectory_status[traj] = (traj.reward,False)
                 continue
 
             curr_st = self.TS.init
@@ -61,43 +59,22 @@ class PathTraversal:
                     if always_satisfied:
                         never_satisfied = True
                     always_satisfied = False
-                    trajectory_status[traj] = (traj.reward,False)
                     break
 
-                '''
-                path_exists = False
-                path_trans = None
-                for trans in curr_st.out_trans:
-                    print(trans.target.micros[0]["name"])
-                    if trans.condition == inp and trans.target.micros[0]["name"] == test_out:
-                        path_exists = True
-                        path_trans = trans
-                        probability *= self.freqs.probs[curr_st.micros[0]["name"]][inp]
-
-                if not path_exists:
-                    #print("unsat")
-                    sat = False
-                    trajectory_status[traj] = 0
-                    break
-                else:
-                    curr_st = path_trans.target
-                    print(curr_st)
-                    print("~~~~~~~")
-                '''
-
-            # double check that the final state is actually possible
+            # double check that full trajectories ended
             if sat and not traj.is_prefix:
+                if curr_st not in can_end_arr:
+                    sat = False
+                '''
                 can_end = False
                 for trans in self.removed_transitions:
                     if trans.source == curr_st:
                         can_end = True
                 if not can_end:
                     sat = False
-                    trajectory_status[traj] = (traj.reward,False)
+                '''
 
             if sat:
-                #print("sat")
-                trajectory_status[traj] = (traj.reward,True)
                 if traj.is_correctness:
                     eqs.append(traj)
                 else:
@@ -121,16 +98,24 @@ class PathTraversal:
                 sat_always = False
         return score,sat_always
 
-    def get_maybe_satisfied_positive_score(self):
+    def get_maybe_satisfied_positive_score(self,traj_prefix_dict):
+
+        do_not_double_count = {}
+        for traj in self.trajectories:
+            do_not_double_count[traj] = False
+
         score = 0
         for traj in self.trajectories:
-            if not traj.is_correctness and traj not in self.always_satisfy and traj not in self.never_satisfy:
+            if not traj.is_correctness and traj not in self.always_satisfy and traj not in self.never_satisfy and not do_not_double_count[traj]:
                 if traj.reward > 0:
                     score += traj.reward
+
+                    for other_traj in traj_prefix_dict[traj]:
+                        if other_traj.reward < 0.0 and other_traj not in self.always_satisfy and not do_not_double_count[other_traj]:
+                            score += other_traj.reward
+                            do_not_double_count[other_traj] = True
+                            if other_traj in self.never_satisfy:
+                                print("ERROR: traj prefix is in the never satisfy dict")
+
+                    do_not_double_count[traj] = True
         return score
-
-        #if len(eqs) == 0:
-        #    print("no correctness trajectories exist within the interaction")
-
-        #exit(0)
-        #return sats, probs, trajectory_status

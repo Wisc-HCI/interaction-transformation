@@ -5,12 +5,13 @@ from mod_tracker import *
 from adapter import *
 from smt_setup import *
 from modifier import *
+from reachability_checker import *
 
 class BFSAdapt(Adapter):
 
     def __init__(self, TS, micro_selection, trajs, inputs, outputs, freqs, mod_perc, path_to_interaction, updated_trace_panel, log, combined_raw_trajs):
         super(BFSAdapt, self).__init__(TS,inputs,outputs,int(round(mod_perc*(len(inputs.alphabet)*len(TS.states)))),int(round(mod_perc*(len(TS.states)))),path_to_interaction)
-        self.trajs = trajs
+        self.trajectories = trajs
         self.freqs = freqs
         self.micro_selection = micro_selection
         self.path_to_interaction = path_to_interaction
@@ -18,13 +19,24 @@ class BFSAdapt(Adapter):
         self.setup_helper = SMTSetup()
         self.modifier = Modifier()
 
-        self.localize_faults(self.trajs)
+        self.localize_faults(self.trajectories)
 
-    def adapt(self):
+    def adapt(self, timer, lock=None):
 
-        # get the set of moddable_sts
-        moddable_sts = self.determine_modifiable_states(self.TS)
-        moddable_trans = self.determine_modifiable_transitions(self.TS)
+        # get dict of trajs with value of size
+        self.traj_len_dict = {}
+        self.traj_prefix_dict = {}
+        for traj in self.trajectories:
+            self.traj_len_dict[traj] = len(traj.vect)
+        self.ordered_trajs = sorted(self.traj_len_dict, key=lambda k: self.traj_len_dict[k], reverse=True)
+        for i in range(len(self.ordered_trajs)):
+            big_traj = self.ordered_trajs[i]
+            self.traj_prefix_dict[big_traj] = []
+            for j in range(i+1,len(self.ordered_trajs)):
+                little_traj = self.ordered_trajs[j]
+                is_within = self.check_if_exists_within(little_traj,big_traj)
+                if is_within:
+                    self.traj_prefix_dict[big_traj].append(little_traj)
 
         # big dictionary serving two purposes
         # 1) prevent redundent searches (detect symmetry)
@@ -38,8 +50,41 @@ class BFSAdapt(Adapter):
         # define how far we want to go
         depth_cap = 3
 
-        # get the current time
-        start_time = time.time()
+        # calculate "impossible" trajectories
+        #  a) trajectories in which the number of modified states exceeds the number of modifiable states
+        self.trajs = []
+        existing_states = []
+        for state_name,state in self.TS.states.items():
+            if state.micros[0]["name"] not in existing_states:
+                existing_states.append(state.micros[0]["name"])
+        for traj in self.trajectories:
+            is_impossible = False
+
+            tv = traj.vect
+            mod_count = 0
+            counted_micros = []
+            for item in tv:
+                if item[1].type not in existing_states and item[1].type not in counted_micros:  # don't double count
+                    counted_micros.append(item[1].type)
+                    mod_count += 1
+
+            if mod_count > self.num_state_limit:
+                is_impossible = True
+
+            if not is_impossible:
+                self.trajs.append(traj)
+            else:
+                print("IMPOSSIBLE: {}".format(str(traj)))
+
+        # set the timer if need be
+        self.timeout = timer
+        self.lock=lock
+
+        # get the set of moddable_sts
+        self.lock.acquire()
+        moddable_sts = self.determine_modifiable_states(self.TS)
+        moddable_trans = self.determine_modifiable_transitions(self.TS)
+        self.lock.release()
 
         # import property checker
         property_module = importlib.import_module("inputs.{}.properties".format(self.path_to_interaction))
@@ -77,7 +122,9 @@ class BFSAdapt(Adapter):
             counter += 1
 
         # define the current reward
+        self.lock.acquire()
         new_eq_vect = self.model_check(TS, self.removed_transitions, self.property_checker, [], [[]], append_correctness_traj=False)
+        self.lock.release()
         eq_cost = len(new_eq_vect)
 
         if eq_cost == 0:
@@ -94,6 +141,11 @@ class BFSAdapt(Adapter):
         best_program = [TS,total_reward]
         depth_stats = {}
         timing_vals = [0,0,0]
+
+        # record start time AFTEr the modifiables have been computed
+        self.start_time = time.time()
+        # get the current time
+        local_start_time = time.time()
 
         while depth < depth_cap:
             if depth not in depth_stats:
@@ -117,11 +169,24 @@ class BFSAdapt(Adapter):
 
         end_time = time.time()
 
-        print("seconds passed is {}".format(end_time-start_time))
-        #print("timing: {}".format(timing_vals))
-        #self.pretty_print_max_rew_info(max_reward_info)
+        print("seconds passed is {}".format(end_time-local_start_time))
 
-        exit()
+        SMUtil().build(best_program[0].transitions, best_program[0].states)
+        st_reachable = {}
+        for state in best_program[0].states.values():
+            rc = ReachabilityChecker(best_program[0], self.inputs, self.outputs, self.removed_transitions)
+            st_reachable[state.name] = True
+            if st_reachable[state.name] == False:
+                print("state {} is unreachable".format(state.name))
+        path_traversal = PathTraversal(best_program[0], self.trajs, self.freqs, self.removed_transitions)
+        path_traversal.check([],[], {})
+
+        correctness_trajs = []
+        for traj in self.trajs:
+            if traj.is_correctness:
+                correctness_trajs.append(traj)
+
+        return best_program[0], st_reachable, correctness_trajs
 
     def modify(self,curr_depth,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals=None):
 
@@ -145,7 +210,7 @@ class BFSAdapt(Adapter):
 
             always_sat_score,sat_always = path_traversal.get_always_satisfied_score()
             #print("always_sat: {}".format(always_sat_score))
-            maybe_sat_positive_score = path_traversal.get_maybe_satisfied_positive_score()
+            maybe_sat_positive_score = path_traversal.get_maybe_satisfied_positive_score(self.traj_prefix_dict)
             #print("maybe_sat: {}".format(maybe_sat_positive_score))
             if sat_always:
                 potential_score = always_sat_score + maybe_sat_positive_score
@@ -170,10 +235,14 @@ class BFSAdapt(Adapter):
 
                 # double check with the model checker
                 # define the current reward
+                if self.lock is not None:
+                    self.lock.acquire()
                 new_eq_vect = self.model_check(TS, self.removed_transitions, self.property_checker, [], [[]], append_correctness_traj=True)
                 eq_cost = len(new_eq_vect)
                 depth_stats[1] += 1
                 depth_stats[2] += eq_cost
+                if self.lock is not None:
+                    self.lock.release()
 
                 if eq_cost == 0:
 
@@ -194,6 +263,9 @@ class BFSAdapt(Adapter):
         prunect = 0
         # progress through the trans mods, followed by the state mods
         for moddable in self.moddable_all:
+
+            if self.timeout is not None and self.timeout <= time.time() - self.start_time:
+                break
 
             # determine if transition or state
             is_state = False

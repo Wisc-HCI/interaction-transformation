@@ -508,3 +508,14 @@ class Adapter:
             is_prefix=True
         trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=is_prefix, is_correctness=True, correctness_id=counter)
         return trajectory_to_return
+
+    def check_if_exists_within(self, little_traj, big_traj):
+        exists = True
+        for i in range(len(little_traj.vect)):
+            l_item = little_traj.vect[i]
+            b_item = big_traj.vect[i]
+
+            if l_item[0].type != b_item[0].type or l_item[1].type != b_item[1].type:
+                exists = False
+                break
+        return exists

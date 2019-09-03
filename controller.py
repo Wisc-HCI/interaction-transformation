@@ -22,14 +22,16 @@ class Controller:
         json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
 
-        newdir = os.path.join(os.getcwd(), 'result_files')
+        self.result_file_dir = 'result_files_{}'.format(self.path_to_interaction)
+
+        newdir = os.path.join(os.getcwd(), self.result_file_dir)
         if not os.path.isdir(newdir):
             os.mkdir(newdir)
         else:
             print("CONTROLLER >> ERROR >> result files exist and cannot be overwritten!")
 
         # initialize the log
-        self.log = AdaptLog("result_files")
+        self.log = AdaptLog(self.result_file_dir)
 
         # read the interaction
         self.json_exp = JSONExporter()
@@ -144,13 +146,13 @@ class Controller:
             # export the interaction
             deletion = accepted_deletions[i]
             exporter = TSExporter(deletion, self.json_data)
-            exporter.export("result_files", mod_tracker=None, ts_name="deletion{}.xml".format(i))
+            exporter.export(self.result_file_dir, mod_tracker=None, ts_name="deletion{}.xml".format(i))
 
         for i in range(len(accepted_additions)):
             # export the interaction
             addition = accepted_additions[i]
             exporter = TSExporter(addition, self.json_data)
-            exporter.export("result_files", mod_tracker=None, ts_name="addition{}.xml".format(i))
+            exporter.export(self.result_file_dir, mod_tracker=None, ts_name="addition{}.xml".format(i))
 
     def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
         self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel, self.combined_raw_trajs)
@@ -172,7 +174,7 @@ class Controller:
         print("STARTING INTERACTION")
         print(self.TS)
         exporter = TSExporter(self.TS, self.json_data)
-        exporter.export("result_files")
+        exporter.export(self.result_file_dir)
         self.log.open()
         self.TS, st_reachables, correctness_trajs, mod_tracker = self.mcmc.adapt(self.time_mcmc, reward_window, progress_window, cost_window, prop_window, distance_window, plot_data)
         self.log.close()
@@ -180,7 +182,7 @@ class Controller:
 
         # export the interaction
         exporter = TSExporter(self.TS, self.json_data)
-        exporter.export("result_files", mod_tracker)
+        exporter.export(self.result_file_dir, mod_tracker)
 
         with open("trajectories_used_for_learning.pkl", "wb") as fp:
             pickle.dump(self.consolidated_trajs, fp)
@@ -228,7 +230,7 @@ class Controller:
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
 
-    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel):
+    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel,timer=None,lock=None):
 
         plot_data = { "rewards": [],
                       "progress": [],
@@ -242,10 +244,12 @@ class Controller:
         #print("Day {}".format(i))
 
         bfs = BFSAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
-        self.TS, st_reachables, correctness_trajs = bfs.adapt()
+        self.TS, st_reachables, correctness_trajs = bfs.adapt(timer,lock)
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
-        # POSSIBLY write the correctness trajs to a correctness.pkl file
+        # export the interaction
+        exporter = TSExporter(self.TS, self.json_data)
+        exporter.export(self.result_file_dir)
 
     def trim_prefixes(self):
         for traj in self.trajs:

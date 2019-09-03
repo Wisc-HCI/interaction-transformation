@@ -1,5 +1,6 @@
 import sys
 import os
+import multiprocessing
 import argparse
 from PyQt5.QtCore import QSize, QRect, Qt, QCoreApplication, QUrl
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QFrame, QScrollArea, QSlider, QComboBox, QGroupBox, QProgressBar, QPushButton, QListWidget, QListWidgetItem, QMainWindow, QAction, QSpinBox, QCheckBox
@@ -36,7 +37,37 @@ class App(QMainWindow):
                         action="store_true")
         parser.add_argument("-n",  "--nogui", help="run without gui",
                         action="store_true")
+        parser.add_argument("-c", "--cores", help="set the processes to start",
+                        nargs='*', type=str)
+        parser.add_argument("-t", "--timer", help="set timer for adaptation (seconds)",
+                        nargs=1, type=int)
         args = parser.parse_args(sys.argv[2:])
+
+        timer = args.timer
+        if timer is not None:
+            timer = timer[0]
+        else:
+            timer = None
+
+        additional_dirs=args.cores
+        if additional_dirs is not None:
+
+            # setup each process
+            processes = []
+
+            # collect the directories
+            dirs = [sys.argv[1]]
+            for dir in additional_dirs:
+                dirs.append(dir)
+
+            lock = multiprocessing.Lock()
+            for dir in dirs:
+                p = multiprocessing.Process(target=self.begin_parallel_process, args=(dir,timer,lock))
+                processes.append(p)
+                p.start()
+            for p in processes:
+                p.join()
+            exit()
 
         self.algorithm="mcmc"
         if args.mcmc:
@@ -74,6 +105,12 @@ class App(QMainWindow):
         elif self.algorithm == "smt":
             self.z3_adapt()
         '''
+
+    def begin_parallel_process(self,arg,timer,lock):
+        lock.acquire()
+        adapter = Controller(arg)
+        lock.release()
+        self.bfs_adapt_no_gui(adapter,timer,lock)
 
     def resizeEvent(self, event):
         self.resized.emit()
@@ -269,6 +306,9 @@ class App(QMainWindow):
         self.adapter.bfs_adapt(self.reward_window, self.progress_window, self.cost_window, self.prop_window, self.distance_window, self.update_trace_panel)
         #self.json_exp.export_from_z3(solution)
         self.load_graph()
+
+    def bfs_adapt_no_gui(self,adapter,timer,lock):
+        adapter.bfs_adapt(None,None,None,None,None,None,timer=timer,lock=lock)
 
     def init_traj_builder(self):
         tb = TrajectoryBuilder(self.adapter.inputs, self.adapter.outputs)
