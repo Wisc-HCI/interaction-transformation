@@ -1,5 +1,4 @@
 import time
-import multiprocessing
 
 from path_traversal import *
 from mod_tracker import *
@@ -22,11 +21,6 @@ class BFSAdapt(Adapter):
         self.localize_faults(self.trajs)
 
     def adapt(self):
-        # setup a lock for multiprocessing
-        self.lock = multiprocessing.Lock()
-
-        # define how many processes we want to have
-        num_processes = 1
 
         # get the set of moddable_sts
         moddable_sts = self.determine_modifiable_states(self.TS)
@@ -69,6 +63,9 @@ class BFSAdapt(Adapter):
         for mod_st in moddable_sts:
             self.moddable_sts.append(TS.states[mod_st.name])
 
+        # consolidate states and transitions
+        self.moddable_all = self.moddable_trans + self.moddable_sts
+
         # come up with an order to the mods
         moddable_order = {}
         counter = 0
@@ -96,27 +93,17 @@ class BFSAdapt(Adapter):
         # keeping state
         best_program = [TS,total_reward]
         depth_stats = {}
+        timing_vals = [0,0,0]
 
         while depth < depth_cap:
             if depth not in depth_stats:
-                depth_stats_shared = multiprocessing.Value('ds',[0,0,0,0,0,0,0])
+                depth_stats[depth] = [0,0,0,0,0,0,0]
                                                          # [# iterations, # times called model checker,
                                                          # counterexamples produced, # correct interactions found,
                                                          # counterexamples used, # branches pruned, # counter pruned]
 
-            # set up multiprocessing for each iteration
-            #processes = []
+            self.modify(curr_depth=0,upto=depth,TS=TS,best_program=best_program,depth_stats=depth_stats[depth],already_modified=[],moddable_order=moddable_order,max_rew_info=max_reward_info,timing_vals=timing_vals)
 
-            for i in range(num_processes):
-                p = multiprocessing.Process(target=self.modify, args=(0,depth,TS,best_program,depth_stats_shared,[],moddable_order,max_reward_info,))
-                processes.append(p)
-                p.start()
-
-            self.modify(curr_depth=0,upto=depth,TS=TS,best_program=best_program,depth_stats=depth_stats[depth],already_modified=[],moddable_order=moddable_order,max_rew_info=max_reward_info)
-
-            for process in processes:
-                process.join()
-            depth_stats[depth] = depth_stats_shared.value
             print("finished depth={}".format(depth))
             print("   # iterations: {}".format(depth_stats[depth][0]))
             print("   # times model checker called: {}".format(depth_stats[depth][1]))
@@ -131,12 +118,12 @@ class BFSAdapt(Adapter):
         end_time = time.time()
 
         print("seconds passed is {}".format(end_time-start_time))
-
+        #print("timing: {}".format(timing_vals))
         #self.pretty_print_max_rew_info(max_reward_info)
 
         exit()
 
-    def modify(self,curr_depth,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info):
+    def modify(self,curr_depth,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals=None):
 
         if curr_depth == upto:
             # we call this an iteration
@@ -146,6 +133,7 @@ class BFSAdapt(Adapter):
             modifiable_trans = [item for item in moddable_order if (item in self.all_trans and item not in already_modified)]
             #print("modifiable_trans: {}".format([str(t) for t in modifiable_trans]))
 
+            pt_start = time.time()
             # get the reward and the eq cost
             is_correct = None
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, self.removed_transitions)
@@ -153,6 +141,7 @@ class BFSAdapt(Adapter):
             eq_vect = []
             path_traversal.check(unweighted_rew_vect, eq_vect, {}, modifiable_trans=modifiable_trans, cond_dict=self.cond_dict)
             new_sum_reward = sum(unweighted_rew_vect)
+            pt_end = time.time()
 
             always_sat_score,sat_always = path_traversal.get_always_satisfied_score()
             #print("always_sat: {}".format(always_sat_score))
@@ -163,9 +152,13 @@ class BFSAdapt(Adapter):
             else:
                 depth_stats[6] += 1
                 potential_score = -1
+            timing_vals[0] += (pt_end-pt_start)
 
             # store the potential score
+            #ss_start = time.time()
             self.store_score(max_rew_info,moddable_order,already_modified,potential_score)
+            #ss_end = time.time()
+            #timing_vals[1] += (ss_end-ss_start)
 
             if len(eq_vect) > 0:
                 depth_stats[4] += 1
@@ -209,6 +202,7 @@ class BFSAdapt(Adapter):
                     #if trans.target != target:
 
                     # make the modification
+                    #mod_start = time.time()
                     undoable = self.modifier.trans_mod(TS,trans,target,cond_dict=self.cond_dict)
 
                     # prune branches with low reward
@@ -219,10 +213,12 @@ class BFSAdapt(Adapter):
                         depth_stats[5] += 1
                     else:
                         # call modify again with a new modification
-                        self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info)
+                        self.modify(curr_depth+1,upto,TS,best_program,depth_stats,already_modified,moddable_order,max_rew_info,timing_vals)
 
                     # undo the modification we just made
                     self.modifier.undo_trans_mod(TS,undoable,cond_dict=self.cond_dict)
+                    #mod_end = time.time()
+                    #timing_vals[2] += (mod_end-mod_start)
                 already_modified.remove(trans)
 
         # make a state modification
