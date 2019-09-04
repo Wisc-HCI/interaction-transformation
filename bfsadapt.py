@@ -52,7 +52,7 @@ class BFSAdapt(Adapter):
         depth = 1
 
         # define how far we want to go
-        depth_cap = 3
+        depth_cap = 5
 
         # calculate "impossible" trajectories
         #  a) trajectories in which the number of modified states exceeds the number of modifiable states
@@ -144,6 +144,10 @@ class BFSAdapt(Adapter):
             total_reward = sum(unweighted_rew_vect)
             self.log.write("starting reward: {}".format(total_reward))
             print("starting reward: {}".format(total_reward))
+            if total_reward == self.max_possible_reward:
+                self.log.write("acheived max reward")
+                print("achieved max reward")
+                self.acheived_max = True
         else:
             print("ERROR: starting bfs interaction was not correct")
             exit()
