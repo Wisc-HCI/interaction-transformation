@@ -15,6 +15,26 @@ class State(object):
         self.id = id
         self.micros = micros
 
+    def compare_to(self, state):
+        if self.name != state.name:
+            return False
+        if self.id != state.id:
+            return False
+        if self.micros[0]["name"] != state.micros[0]["name"]:
+            return False
+
+        to_return = True
+        for t_out_1 in self.out_trans:
+            for t_out_2 in state.out_trans:
+                if not t_out_1.compare_to(t_out_2):
+                    to_return = False
+        for t_in_1 in self.in_trans:
+            for t_in_2 in state.in_trans:
+                if not t_in_1.compare_to(t_in_2):
+                    to_return = False
+
+        return True
+
     def copy(self):
         return State(self.name, self.id, self.micros)
 
@@ -31,6 +51,24 @@ class Transition(object):
         self.target = None
 
         self.condition = condition
+
+    def compare_to(self, trans):
+        if trans.condition != self.condition:
+            return False
+
+        if trans.source_id != self.source_id:
+            return False
+
+        if trans.target_id != self.target_id:
+            return False
+
+        if trans.target.name != self.target.name:
+            return False
+
+        if trans.source.name != self.source.name:
+            return False
+
+        return True
 
     def copy(self):
         return Transition(self.source_id, self.target_id, self.condition)
@@ -50,6 +88,21 @@ class TS(object):
         self.id2state = {}
         for state_name,state in self.states.items():
             self.id2state[state.id] = state
+
+    def is_different(self, other):
+
+        is_different = False
+
+        for state_name,state in self.states.items():
+            exists_in_other = False
+            for state_name_2, state2 in other.states.items():
+                if state.compare_to(state2):
+                    exists_in_other = True
+            if not exists_in_other:
+                is_different = True
+                break
+
+        return is_different
 
     def get_distance(self, other):
         distance = 0

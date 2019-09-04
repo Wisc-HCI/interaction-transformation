@@ -244,7 +244,9 @@ class Controller:
         #print("Day {}".format(i))
 
         bfs = BFSAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
+        self.log.open()
         self.TS, st_reachables, correctness_trajs = bfs.adapt(timer,lock)
+        self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
         # export the interaction

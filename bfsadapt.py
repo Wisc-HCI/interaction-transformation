@@ -18,6 +18,7 @@ class BFSAdapt(Adapter):
         self.micro_selection = micro_selection
         self.path_to_interaction = path_to_interaction
         self.update_trace_panel = updated_trace_panel
+        self.log = log
 
         self.setup_helper = SMTSetup()
         self.modifier = Modifier()
@@ -79,6 +80,12 @@ class BFSAdapt(Adapter):
             else:
                 print("IMPOSSIBLE: {}".format(str(traj)))
 
+        # determine the maximum possible reward
+        self.max_possible_reward = 0
+        for traj in self.trajs:
+            self.max_possible_reward += max(0,traj.reward)
+        self.acheived_max = False
+
         # set the timer if need be
         self.timeout = timer
         self.lock=lock
@@ -135,6 +142,7 @@ class BFSAdapt(Adapter):
             unweighted_rew_vect = []
             path_traversal.check(unweighted_rew_vect, [], {})
             total_reward = sum(unweighted_rew_vect)
+            self.log.write("starting reward: {}".format(total_reward))
             print("starting reward: {}".format(total_reward))
         else:
             print("ERROR: starting bfs interaction was not correct")
@@ -150,15 +158,26 @@ class BFSAdapt(Adapter):
         # get the current time
         local_start_time = time.time()
 
+        '''
+        # debug
+        for trans in self.moddable_trans:
+            print(str(trans))
+        for state in self.moddable_sts:
+            print(str(state))
+        '''
+
         while depth < depth_cap:
             if depth not in depth_stats:
                 depth_stats[depth] = [0,0,0,0,0,0,0]
                                                          # [# iterations, # times called model checker,
                                                          # counterexamples produced, # correct interactions found,
+
                                                          # counterexamples used, # branches pruned, # counter pruned]
 
+            #TS_to_compare = TS.copy()
+            self.log.write("ITERATION {}".format(depth))
+            itr_start_time = time.time()
             self.modify(curr_depth=0,upto=depth,depth_cap=depth_cap,TS=TS,best_program=best_program,depth_stats=depth_stats[depth],already_modified=[],moddable_order=moddable_order,max_rew_info=max_reward_info,timing_vals=timing_vals)
-
             print("finished depth={}".format(depth))
             print("   # iterations: {}".format(depth_stats[depth][0]))
             print("   # times model checker called: {}".format(depth_stats[depth][1]))
@@ -167,12 +186,32 @@ class BFSAdapt(Adapter):
             print("   # correct interactions found: {}".format(depth_stats[depth][3]))
             print("   # branches pruned: {}".format(depth_stats[depth][5]))
             print("   # branches flagged as always violating a counterexample: {}".format(depth_stats[depth][6]))
+
+            self.log.write("  finished depth={}".format(depth))
+            self.log.write("     # iterations: {}".format(depth_stats[depth][0]))
+            self.log.write("     # times model checker called: {}".format(depth_stats[depth][1]))
+            self.log.write("     # counterexamples produced: {}".format(depth_stats[depth][2]))
+            self.log.write("     # counterexamples used: {}".format(depth_stats[depth][4]))
+            self.log.write("     # correct interactions found: {}".format(depth_stats[depth][3]))
+            self.log.write("     # branches pruned: {}".format(depth_stats[depth][5]))
+            self.log.write("     # branches flagged as always violating a counterexample: {}".format(depth_stats[depth][6]))
+            itr_end_time = time.time()
+            self.log.write("  time passed: {} seconds".format(itr_end_time - itr_start_time))
             #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
             depth += 1
+
+            '''
+            if TS.is_different(TS_to_compare):
+                print("ERROR: TS is different")
+                exit()
+            '''
+
+        #self.pretty_print_max_rew_info(max_reward_info)
 
         end_time = time.time()
 
         print("seconds passed is {}".format(end_time-local_start_time))
+        self.log.write("seconds passed is {}".format(end_time-local_start_time))
 
         # duplicate the transitions in removed:
         removed_transitions = [best_program[0].duplicate_transition(trans.source.name, trans.condition, trans.target.name) for trans in self.removed_transitions]
@@ -218,7 +257,8 @@ class BFSAdapt(Adapter):
             pt_end = time.time()
 
             # set up branch pruning for future major iterations
-            if curr_depth != depth_cap: # it would be pointless to do this at the highest level, and a waste of time
+            #print("modding to {}".format(str(already_modified[0])))
+            if curr_depth != depth_cap - 1: # it would be pointless to do this at the highest level, and a waste of time
                 always_sat_score,sat_always = path_traversal.get_always_satisfied_score()
                 maybe_sat_positive_score = path_traversal.get_maybe_satisfied_positive_score(self.traj_prefix_dict)
                 if sat_always:
@@ -259,9 +299,14 @@ class BFSAdapt(Adapter):
                     new_total_reward = new_sum_reward
                     # if the new_total_reward is greater than the old...
                     if new_total_reward > best_program[1]:
+                        self.log.write("found better interaction with reward {}".format(new_total_reward))
                         print("found better interaction with reward {}".format(new_total_reward))
                         best_program[0] = TS.copy()
                         best_program[1] = new_total_reward
+                        if new_total_reward >= self.max_possible_reward:
+                            self.log.write("acheived max reward")
+                            print("achieved max reward")
+                            self.acheived_max = True
             else:
                 is_correct = False
             return
@@ -276,6 +321,8 @@ class BFSAdapt(Adapter):
         for moddable in local_moddable_all:
 
             if self.timeout is not None and self.timeout <= time.time() - self.start_time:
+                break
+            if self.acheived_max:
                 break
 
             # determine if transition or state

@@ -39,6 +39,12 @@ class PathTraversal:
             if vect[0][1].type != self.TS.init.micros[0]["name"]:
                 sat = False
                 trajectory_status[traj] = (traj.reward,False)
+                always_satisfied = False
+                never_satisfied = True
+
+                if not traj.is_correctness and never_satisfied:
+                    self.never_satisfy.append(traj)
+
                 continue
 
             curr_st = self.TS.init
@@ -100,6 +106,8 @@ class PathTraversal:
                 score += traj.reward
             else:
                 sat_always = False
+        #for traj in self.never_satisfy:
+        #    print("never sat: {}".format(str(traj)))
         return score,sat_always
 
     def get_maybe_satisfied_positive_score(self,traj_prefix_dict):
@@ -113,10 +121,12 @@ class PathTraversal:
             if not traj.is_correctness and traj not in self.always_satisfy and traj not in self.never_satisfy and not do_not_double_count[traj]:
                 if traj.reward > 0:
                     score += traj.reward
+                    #print("maybe sat: {}".format(str(traj)))
 
                     for other_traj in traj_prefix_dict[traj]:
                         if other_traj.reward < 0.0 and other_traj not in self.always_satisfy and not do_not_double_count[other_traj]:
                             score += other_traj.reward
+                            #print("   -> maybe sat: {}".format(str(other_traj)))
                             do_not_double_count[other_traj] = True
                             if other_traj in self.never_satisfy:
                                 print("ERROR: traj prefix is in the never satisfy dict")
