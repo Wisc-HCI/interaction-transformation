@@ -111,6 +111,8 @@ class MCMCAdapt(Adapter):
         def decide_on_states_to_add(additions_left, score_dict):
             state2add = []
             for state in score_dict:
+                if state == "Farewell":
+                    continue
                 if len(state2add) < additions_left:  # if there is still room to add
                     state2add.append(state)
                 else:
