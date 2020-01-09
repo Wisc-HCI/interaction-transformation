@@ -14,10 +14,14 @@ This software has been tested on OSX 10.14 and Ubuntu 16.04. Python3 is also req
 This software requires that you use the PyNuSMV model checker. We have provided a copy of the PyNuSMV source code in this repository. Versions installed using other means will not work with this software. For more information, see the source of PyNuSMV [1][2]. Install PyNuSMV by running the following:
 
 On OSX:
+```
 export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:<path_to_local_repo>/src/verification/pynusmv/src/lib/
+```
 
 On Ubuntu:
+```
 LD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:<path_to_local_repo>/src/verification/pynusmv/src/lib/
+```
 
 ### d3 and Dagre
 To visualize the transformation process, d3 and Dagre are both required. Download them both, and place the node_modules folder in src.
