@@ -28,7 +28,7 @@ Run the following:
 ./bfs.sh
 ```
 
-# Citing Synthé
+# Citing this code
 
 More to come about this later.
 
