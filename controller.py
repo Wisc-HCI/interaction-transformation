@@ -1,6 +1,8 @@
 import threading
 import importlib
-from copy import deepcopy
+import util
+import pickle
+from copy import deepcopy,copy
 
 from interaction_components import *
 from mcmc_repair import *
@@ -12,12 +14,18 @@ from reader import *
 from trajectory_builder import *
 from log import *
 from ts_exporter import *
-import util
-import pickle
+from analyzer import *
 
 class Controller:
 
-    def __init__(self, path_to_interaction):
+    '''
+    Class: Controller
+    Purpose: Coordinates various components in the transformation process, including:
+                a) reading and preprocessing the transition system and trajectories
+                b) setting up the transformation algorithm to run
+    '''
+
+    def __init__(self, path_to_interaction, interaction_file="interaction.xml"):
         self.path_to_interaction = path_to_interaction
         json_raw=open("inputs/{}/io.json".format(self.path_to_interaction))
         json_data = json.load(json_raw)
@@ -35,10 +43,17 @@ class Controller:
 
         # read the interaction
         self.json_exp = JSONExporter()
-        self.TS, self.micro_selection = Reader("inputs/{}/interaction.xml".format(path_to_interaction),json_data).build()
+        self.TS, self.micro_selection = Reader("inputs/{}/{}".format(path_to_interaction,interaction_file),json_data).build()
         st_reachables = {}
         for state in self.TS.states:
             st_reachables[state] = True
+
+        '''
+        # DEBUGGING -- comment in to see the loaded transition system pretty-printed
+        # print out the TS and then exit
+        self.TS.pretty_print()
+        exit(0)
+        '''
 
         self.freqs = Frequencies()
         self.inputs = InputAlphabet(json_data)
@@ -52,7 +67,9 @@ class Controller:
         self.json_data = json_data
 
         # read in arrays, form trajectories
-        self.trajs = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction)).get_trajectories()
+        tr = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction))
+        self.trajs = tr.get_trajectories()
+        self.raw_traj_dict = tr.traj_raw_dict
         self.raw_trajs = []
         for traj in self.trajs:
             self.raw_trajs.append(traj.copy())
@@ -86,11 +103,11 @@ class Controller:
 
         # remove final human/robot actions from prefixes
         print("CONTROLLER >> finding baseline")
-        baseline = self.find_baseline(original_interaction_trajs)
+        self.baseline = self.find_baseline(original_interaction_trajs)
         #baseline = 0.1
-        print("CONTROLLER >> baseline set to {}".format(baseline))
+        print("CONTROLLER >> baseline set to {}".format(self.baseline))
         print("CONTROLLER >> offsetting rewards based on baseline")
-        self.offset_rewards(baseline)
+        self.original_rewards = self.offset_rewards(self.baseline)
 
         #self.trajs = []
         '''
@@ -140,7 +157,7 @@ class Controller:
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 
     def compute_correctness_TS(self):
-        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(3,3,self.combined_raw_trajs)
+        accepted_additions, accepted_deletions = self.mcmc.get_correct_mutations(0,6,self.combined_raw_trajs)
 
         for i in range(len(accepted_deletions)):
             # export the interaction
@@ -154,9 +171,27 @@ class Controller:
             exporter = TSExporter(addition, self.json_data)
             exporter.export(self.result_file_dir, mod_tracker=None, ts_name="addition{}.xml".format(i))
 
+    def compute_raw_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
+
+        self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel, self.combined_raw_trajs)
+        self.mcmc.compute_inclusion()
+
     def compute_inclusion(self,update_trace_panel, update_mod_panel, algorithm="mcmc"):
         self.mcmc = MCMCAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, algorithm, self.log, update_mod_panel, self.combined_raw_trajs)
         self.mcmc.compute_inclusion()
+
+    def compare_interactions(self,starter,ender):
+
+        starter_TS, _ = Reader(starter,self.json_data).build()
+        ender_TS, _ = Reader(ender,self.json_data).build()
+        raw_trajs_gen_prefs = copy.copy(self.raw_trajs)
+        gen_pref_list,gen_pref_dict = self.generate_prefixes(raw_trajs_gen_prefs)
+
+        analyzer = Analyzer(starter_TS,ender_TS,self.inputs)
+        analyzer.begin_trajectory_analysis()
+        analyzer.calculate_seen_freq(self.raw_trajs,raw_trajs_gen_prefs,gen_pref_list,gen_pref_dict)
+        analyzer.begin_interaction_analysis()
+        analyzer.analyze_interactions(self.trajs, self.original_rewards)
 
     def mcmc_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel, update_mod_panel, algorithm="mcmc"):
 
@@ -268,8 +303,11 @@ class Controller:
         return total_reward*1.0/number_trajectories if number_trajectories > 0 else 0
 
     def offset_rewards(self, baseline):
+        original_rewards = {}
         for traj in self.trajs:
+            original_rewards[traj] = traj.reward
             traj.reward -= baseline
+        return original_rewards
 
     def generate_prefixes(self, consolidated_trajectories):
         '''
@@ -279,6 +317,7 @@ class Controller:
         # create a prefix dict
         # format is dict[traj_comparable_string] = (traj, [score1, score2, ... score_n])
         generated_prefix_dict = {}
+        generated_prefix_list = [] # does NOT contain full trajectories
 
         # loop through the trajectories
         for traj in consolidated_trajectories:
@@ -301,6 +340,7 @@ class Controller:
 
                 # generate a new trajectory
                 new_prefix = Trajectory(pvect_copy,traj.reward,is_prefix=True,is_correctness=False,correctness_id=-1,is_generated_prefix=True)
+                generated_prefix_list.append(new_prefix)
 
                 # test whether the prefix already exists in the dataset
                 pref_string = new_prefix.comparable_string()
@@ -367,6 +407,7 @@ class Controller:
                 #prefix.reward = reward
                 prefix.reward = overall_reward
                 consolidated_trajectories.append(prefix)
+        return generated_prefix_list,generated_prefix_dict
 
     def consolidate_trajectories(self):
         #print("RAW TRAJS")

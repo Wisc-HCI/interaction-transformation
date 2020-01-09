@@ -4,6 +4,7 @@ from state_machine import *
 from interaction_components import *
 
 import pickle
+import copy
 
 class Reader:
 
@@ -92,7 +93,9 @@ class TrajectoryReader:
 
             print("TRAJS:")
             print(raw_trajs)
+            self.traj_raw_dict = {}
             for raw_traj in raw_trajs:
+                copied_raw_traj = copy.deepcopy(raw_traj)
                 '''
                 _ = raw_traj.pop(-1) # age
                 _ = raw_traj.pop(-1) # gender
@@ -150,7 +153,7 @@ class TrajectoryReader:
                 trajectory = Trajectory(traj_vect,score,is_prefix,is_correctness)
                 '''
                 trajectory = self.convert_trajectory(raw_traj)
-                print(trajectory)
+                self.traj_raw_dict[trajectory] = copied_raw_traj
                 trajs.append(trajectory)
 
         return trajs

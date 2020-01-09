@@ -39,9 +39,49 @@ class App(QMainWindow):
                         action="store_true")
         parser.add_argument("-c", "--cores", help="set the processes to start",
                         nargs='*', type=str)
+        parser.add_argument("-a", "--analyze", help="analyze traces with respect to starting and ending interactions",
+                        nargs=2, type=str)
         parser.add_argument("-t", "--timer", help="set timer for adaptation (seconds)",
                         nargs=1, type=int)
+        parser.add_argument("-i", "--compute_inclusion", help="only compute which traces from the (existing) history file are within the (specified) interaction",
+                        nargs=1, type=str)
         args = parser.parse_args(sys.argv[2:])
+
+        self.raw_traj_dict = None
+        to_compute_inclusion = args.compute_inclusion
+        if to_compute_inclusion is not None:
+            self.algorithm="mcmc"
+            if args.mcmc:
+                self.algorithm="mcmc"
+            if args.random:
+                self.algorithm="random"
+            if args.smt:
+                self.algorithm="smt"
+            if args.bfs:
+                self.algorithm="bfs"
+
+            self.title = 'Repair Progress'
+            desktop = QApplication.desktop()
+            screen_resolution = desktop.screenGeometry()
+            self.width, self.height = screen_resolution.width(), screen_resolution.height()
+
+            # initialize the controller
+            self.adapter = Controller(sys.argv[1],to_compute_inclusion[0])
+            self.raw_traj_dict = self.adapter.raw_traj_dict
+
+            # show the UI
+            self.resized.connect(self.resizeWindow)
+            self.initUI()
+            self.adapter.compute_raw_inclusion(self.update_trace_panel, self.set_mod_text)
+            exit()
+
+        to_analyze=args.analyze
+        if to_analyze is not None:
+            start_interaction = to_analyze[0]
+            end_interaction = to_analyze[1]
+            adapter = Controller(sys.argv[1])
+            adapter.compare_interactions(start_interaction,end_interaction)
+            exit()
 
         timer = args.timer
         if timer is not None:
@@ -236,7 +276,7 @@ class App(QMainWindow):
         app.processEvents()
 
     def load_graph(self):
-        url = QUrl.fromLocalFile("{}/d3js/example2.html".format(os.getcwd()))
+        url = QUrl.fromLocalFile("{}/d3js/vis.html".format(os.getcwd()))
         self.webView.load(url)
 
     def make_dimension_file(self):
@@ -282,9 +322,15 @@ class App(QMainWindow):
                 item.setBackground(QColor(200,200,200))
             else:
                 item.setBackground(QColor(color))
+                if self.raw_traj_dict is not None:
+                    if trajectory in self.raw_traj_dict:
+                        raw_traj = self.raw_traj_dict[trajectory]
+                        print("date: {}, id: {}".format(raw_traj[-14],raw_traj[-13]))
 
             counter += 1
             self.trace_list.addItem(item)
+
+
 
     def compute_inclusion(self):
         self.adapter.compute_inclusion(self.update_trace_panel, self.set_mod_text)

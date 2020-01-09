@@ -178,6 +178,22 @@ class TS(object):
 
         return TS(states_copy, transitions_copy, init_copy)
 
+    def pretty_print(self):
+        print(self.__pretty_str__())
+
+    def __pretty_str__(self):
+        string = "TRANSITION SYSTEM\ninit: {}\n".format(self.init.name)
+        for st in self.states:
+            string += "state: {}({})\n".format(st, self.states[st].id)
+        for source_id, temp in self.transitions.items():
+            string += "\n"
+            for target_id, self_transitions in temp.items():
+                for trans in self_transitions:
+                    string += "transition: {}({}) >--{}--> {}({})\n".format(trans.source.name, trans.source.id, trans.condition, trans.target.name, trans.target.id)
+
+        string += "END"
+        return string
+
     def __str__(self):
         string = "TRANSITION SYSTEM\ninit: {}\n".format(self.init.name)
         for st in self.states:
