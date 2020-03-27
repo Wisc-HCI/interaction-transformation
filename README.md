@@ -8,10 +8,10 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Software Prerequisites and Installation
 
-This software has been tested on OSX 10.14 and Ubuntu 16.04. Python3 is also required to use this software. Use pip to install any libraries that python3 requires.
+This software has been tested on OSX 10.14 and Ubuntu 16.04. Unfortunately, we have not found a way to install the required model checking library, PyNuSMV, on other versions of Ubuntu or OSX. Python3 is also required to use this software. Use pip to install any libraries that python3 requires.
 
 ### PyNuSMV
-This software requires that you use the PyNuSMV model checker. We have provided a copy of the PyNuSMV source code in this repository. Versions installed using other means will not work with this software. For more information, see the source of PyNuSMV [1][2]. Install PyNuSMV by running the following:
+This software requires that you use the PyNuSMV model checker. We have provided a copy of the PyNuSMV source code in this repository. Versions installed using other methods (e.g PyPI) will not work with this software. For more information, see the source of PyNuSMV [1][2]. Install PyNuSMV by following the instructions on the PyNuSMV github page [1]. Once installed, run the following:
 
 On OSX:
 ```
