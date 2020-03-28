@@ -1,6 +1,5 @@
 import sys
-sys.path.append("/Users/david/Documents/UW_Research/Repair/repair_algorithms/verification/pynusmv/src/")
-import tools.tlace.tlace
+import copy
 
 class ModelChecker:
 
@@ -116,3 +115,36 @@ class ModelChecker:
     def check(self):
         results, counterexamples = tools.tlace.tlace.check_and_explain("verification/model.smv")
         return results, counterexamples
+
+    def bounded_check(self, TS):
+        '''
+        Each example in bounded check is hard-coded for the time being
+        '''
+        init = TS.init
+        curr_path = [init]
+
+        counterexamples = []
+        self.traverse_TS(curr_path,counterexamples)
+
+        return [1,1,1],counterexamples
+
+    def traverse_TS(self,curr_path,counterexamples):
+
+        # check the current path for property violations, add them to the counterexamples
+
+        # grab the top state in the path
+        curr_state = curr_path[-1]
+
+        # run through each outgoing transition, checking that we actually can move forward
+        for trans in curr_state.out_trans:
+            target_state = trans.target
+
+            # check that the target state does not already exist 2x in the current path
+            if curr_path.count(target_state) > 2:
+                continue
+
+            # create a path copy and add to it
+            copied_path = copy.copy(curr_path)
+            copied_path.append(trans)
+            copied_path.append(target_state)
+            self.traverse_TS(copied_path,counterexamples)

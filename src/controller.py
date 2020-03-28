@@ -15,6 +15,7 @@ from trajectory_builder import *
 from log import *
 from ts_exporter import *
 from analyzer import *
+from trace_generator import *
 
 class Controller:
 
@@ -67,19 +68,38 @@ class Controller:
         self.json_data = json_data
 
         # read in arrays, form trajectories
-        tr = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction))
-        self.trajs = tr.get_trajectories()
-        self.raw_traj_dict = tr.traj_raw_dict
-        self.raw_trajs = []
-        for traj in self.trajs:
-            self.raw_trajs.append(traj.copy())
+        try:
+            '''
+            There are history files to load in
+            '''
+            tr = TrajectoryReader("inputs/{}/history.pkl".format(self.path_to_interaction))
+            self.trajs = tr.get_trajectories()
+            self.raw_traj_dict = tr.traj_raw_dict
+            self.raw_trajs = []
+            for traj in self.trajs:
+                self.raw_trajs.append(traj.copy())
 
-        # combine the raw trajs just in case
-        combined_raw_traj_dict = {}
-        self.combined_raw_trajs = []
-        self.ignore_duplicate_trajectories(self.raw_trajs,combined_raw_traj_dict,self.combined_raw_trajs)
+            # combine the raw trajs just in case
+            combined_raw_traj_dict = {}
+            self.combined_raw_trajs = []
+            self.ignore_duplicate_trajectories(self.raw_trajs,combined_raw_traj_dict,self.combined_raw_trajs)
 
-        original_interaction_trajs = TrajectoryReader("inputs/{}/oi_history.pkl".format(self.path_to_interaction)).get_trajectories()
+            original_interaction_trajs = TrajectoryReader("inputs/{}/oi_history.pkl".format(self.path_to_interaction)).get_trajectories()
+        except:
+            '''
+            There are no history files to load in -- we will generate them artificially
+            '''
+            tb = TraceGenerator(self.TS,self.inputs.alphabet)
+            self.trajs = tb.get_trajectories(50)
+            self.raw_trajs = []
+            for traj in self.trajs:
+                self.raw_trajs.append(traj.copy())
+
+            combined_raw_traj_dict = {}
+            self.combined_raw_trajs = []
+            self.ignore_duplicate_trajectories(self.raw_trajs,combined_raw_traj_dict,self.combined_raw_trajs)
+
+            original_interaction_trajs = copy.copy(self.trajs)
 
         # generate FAKE sample traces
         #self.trajs = []
@@ -265,7 +285,7 @@ class Controller:
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
 
-    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel,timer=None,lock=None):
+    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel,timer=15,lock=None):
 
         plot_data = { "rewards": [],
                       "progress": [],

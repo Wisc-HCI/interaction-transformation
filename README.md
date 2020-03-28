@@ -8,19 +8,10 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Software Prerequisites and Installation
 
-This software has been tested on OSX 10.14 and Ubuntu 16.04. Unfortunately, we have not found a way to install the required model checking library, PyNuSMV, on other versions of Ubuntu or OSX. Python3 is also required to use this software. Use pip to install any libraries that python3 requires.
+This software has been tested on OSX and Ubuntu, and should work fine on either system. Python3 is also required to use this software. Use pip to install any libraries that python3 requires.
 
-### PyNuSMV
-This software requires that you use the PyNuSMV model checker. We have provided a copy of the PyNuSMV source code in this repository. Versions installed using other methods (e.g PyPI) will not work with this software. For more information, see the source of PyNuSMV [1][2]. Install PyNuSMV by following the instructions on the PyNuSMV github page [1]. Once installed, run the following:
-
-On OSX:
-```
-export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:<path_to_local_repo>/src/verification/pynusmv/src/lib/
-```
-
-On Ubuntu:
-```
-LD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:<path_to_local_repo>/src/verification/pynusmv/src/lib/
+### Note about PyNuSMV
+At the time that the research article associated with this repository was submitted and published, this software required the use of the PyNuSMV model checker [1][2]. PyNuSMV required OSX 10.14 or Ubuntu 16.04 -- we did not find a way to install PyNuSMV on other versions of Ubuntu or OSX. Thus, we have removed all dependencies for PyNuSMV and removed the copy that we previously included in this repository. A custom model checker to replace PyNuSMV is under development.
 ```
 
 ### d3 and Dagre

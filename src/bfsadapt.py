@@ -136,7 +136,7 @@ class BFSAdapt(Adapter):
         new_eq_vect = self.model_check(TS, self.removed_transitions, self.property_checker, [], [[]], append_correctness_traj=False)
         self.release_lock(self.lock)
         eq_cost = len(new_eq_vect)
-
+        print("here2")
         if eq_cost == 0:
             path_traversal = PathTraversal(TS, self.trajs, self.freqs, self.removed_transitions)
             unweighted_rew_vect = []
@@ -169,7 +169,6 @@ class BFSAdapt(Adapter):
         for state in self.moddable_sts:
             print(str(state))
         '''
-
         while depth < depth_cap:
             if depth not in depth_stats:
                 depth_stats[depth] = [0,0,0,0,0,0,0]

@@ -401,11 +401,11 @@ class Adapter:
         PyNuSMV and KOSA MODEL CHECKERS
         '''
         # export the transition system to .smv file
-        self.model_checker.create_and_load_model(TS, removed_transitions, self.inputs, self.outputs)
+        #self.model_checker.create_and_load_model(TS, removed_transitions, self.inputs, self.outputs)
 
         # do the checking
         kosa_results, kosa_counterexamples = property_checker.compute_constraints(TS, self.setup_helper, removed_transitions)
-        results, counterexamples = self.model_checker.check()
+        results, counterexamples = self.model_checker.bounded_check(TS)
         results = kosa_results + results
         result = sum(results)*1.0/len(results)
 

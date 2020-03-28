@@ -1,14 +1,15 @@
 import numpy as np
+import random
 
 from interaction_components import *
 
 class TraceGenerator:
 
-    def __init__(self, TS):
+    def __init__(self, TS,inputs):
         self.TS = TS
-        print(self.TS)
+        self.inputs = inputs
 
-        self.prob_ready = 0.4
+        self.leave_early_prob = 0.2
 
     def get_trajectories(self, n):
         trajs = []
@@ -16,36 +17,45 @@ class TraceGenerator:
         for i in range(n):
             traj = []
             traj_score = -1
-            traj.append((HumanInput("Ready"), Microinteraction(self.TS.init.micros[0]["name"], 0)))
+            traj.append((HumanInput("General"), Microinteraction(self.TS.init.micros[0]["name"], 0)))
 
             curr_state = self.TS.init
-            highest_amount = 0
-            curr_amount = 0
+
+            is_prefix = False
+            is_correctness = False
+            score = 0.0
+
+            '''
+            basic scoring
+            '''
+            contains_listout = False
+
             while True:
-                options = curr_state.out_trans
-
-                if curr_state.micros[0]["name"] == "Remark":
-                    curr_amount += 1
-                else:
-                    if curr_amount > highest_amount:
-                        highest_amount = curr_amount
-                    curr_amount = 0
-                if len(options) == 0:
+                leave_val = np.random.random()
+                if leave_val <= self.leave_early_prob:
+                    is_prefix = True
                     break
-                conditions = ["Ready", "Ignore"]
 
-                selection = np.random.choice(conditions, p=[self.prob_ready, 1-self.prob_ready])
+                selection = random.choice(list(self.inputs.keys()))
+                available_trans = curr_state.out_trans
                 trans = None
-                for option in options:
-                    if option.condition == selection:
-                        trans = option
-                        curr_state = option.target
-                        break
+                for t in available_trans:
+                    if t.condition == selection:
+                        trans = t
+                        curr_state = trans.target
 
+                if trans is None:
+                    break
+
+                if trans.target.micros[0]["name"] == "ListOut":
+                    contains_listout = True
                 traj.append((HumanInput(selection), Microinteraction(trans.target.micros[0]["name"], 0)))
 
+            if not is_prefix:
+                traj.append((HumanInput("Ignore"),Microinteraction("END")))
+
             score = np.random.random()
-            if highest_amount > 4:
-                score -= 1
-            trajs.append(Trajectory(traj,score))
+            if contains_listout:
+                score = -1
+            trajs.append(Trajectory(traj,score,is_prefix,is_correctness))
         return trajs
