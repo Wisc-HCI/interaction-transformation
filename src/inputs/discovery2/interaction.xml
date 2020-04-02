@@ -49,10 +49,8 @@
 		<target ref="2"/>
 		<guard condition="human_ignore"/>
 		<guard condition="human_general"/>
-		<guard condition="human_askClarify"/>
 		<guard condition="human_affirm"/>
 		<guard condition="human_deny"/>
-		<guard condition="human_unsatRequest"/>
 	</transition>
 
 	<transition>
@@ -73,10 +71,8 @@
 		<target ref="2"/>
 		<guard condition="human_ignore"/>
 		<guard condition="human_general"/>
-		<guard condition="human_askClarify"/>
 		<guard condition="human_affirm"/>
 		<guard condition="human_deny"/>
-		<guard condition="human_unsatRequest"/>
 	</transition>
 
 	<transition>
@@ -97,9 +93,7 @@
 		<target ref="2"/>
 		<guard condition="human_ignore"/>
 		<guard condition="human_general"/>
-		<guard condition="human_askClarify"/>
 		<guard condition="human_deny"/>
-		<guard condition="human_unsatRequest"/>
 	</transition>
 
 	<transition>
@@ -126,10 +120,8 @@
 		<target ref="2"/>
 		<guard condition="human_ignore"/>
 		<guard condition="human_general"/>
-		<guard condition="human_askClarify"/>
 		<guard condition="human_affirm"/>
 		<guard condition="human_deny"/>
-		<guard condition="human_unsatRequest"/>
 	</transition>
 
 	<transition>

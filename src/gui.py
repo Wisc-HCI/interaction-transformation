@@ -195,6 +195,18 @@ class App(QMainWindow):
         self.load_graph()
 
         # control panel
+        '''
+        People should be able to:
+        #1 begin a new adaptation
+        #2 choose whether to input an example history file or simulate
+        #3 If simulate:
+            #1 Choose number of epochs
+            #2 Choose number of samples per day
+            #3 Activate/deactivate baseline control
+            #4 Activate/deactivate gen. prefix control
+            #5 Choose percentage of allowable modifications
+            #6 Choose allowable time per epoch (default 30 seconds)
+        '''
         self.control_panel = QLabel(self)
         self.control_panel.setGeometry(0,0,400,self.height)
         self.control_panel.setFrameShape(QFrame.Box)

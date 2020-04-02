@@ -16,6 +16,7 @@ from log import *
 from ts_exporter import *
 from analyzer import *
 from trace_generator import *
+from sampler import *
 
 class Controller:
 
@@ -67,6 +68,8 @@ class Controller:
 
         self.json_data = json_data
 
+        self.sampler = Sampler(self.inputs.alphabet, self.outputs.alphabet, None, None, history_file=None)
+
         # read in arrays, form trajectories
         try:
             '''
@@ -90,7 +93,17 @@ class Controller:
             There are no history files to load in -- we will generate them artificially
             '''
             tb = TraceGenerator(self.TS,self.inputs.alphabet)
-            self.trajs = tb.get_trajectories(50)
+            self.trajs = tb.get_trajectories(150)
+            # get sampled trajectories
+            mut_trajs = []
+            for traj in self.trajs:
+                mutated_trajs = self.sampler.mutate_one_trajectory(traj,8)
+                if len(mutated_trajs) > 0:
+                    mtraj = random.choice(mutated_trajs)
+                    mut_trajs.append(mtraj)
+            for traj in mut_trajs:
+                traj.score = tb.simple_score(traj.vect, traj.is_prefix)
+                self.trajs.append(traj)
             self.raw_trajs = []
             for traj in self.trajs:
                 self.raw_trajs.append(traj.copy())
@@ -285,7 +298,7 @@ class Controller:
 
         # POSSIBLY write the correctness trajs to a correctness.pkl file
 
-    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel,timer=15,lock=None):
+    def bfs_adapt(self, reward_window, progress_window, cost_window, prop_window, distance_window, update_trace_panel,timer=30,lock=None):
 
         plot_data = { "rewards": [],
                       "progress": [],
@@ -298,9 +311,29 @@ class Controller:
         #for i in range(2):
         #print("Day {}".format(i))
 
-        bfs = BFSAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
         self.log.open()
-        self.TS, st_reachables, correctness_trajs = bfs.adapt(timer,lock)
+        for i in range(0,1):
+            bfs = BFSAdapt(self.TS, self.micro_selection, self.consolidated_trajs, self.inputs, self.outputs, self.freqs, self.mod_perc, self.path_to_interaction, update_trace_panel, self.log, self.combined_raw_trajs)
+            self.TS, st_reachables, correctness_trajs = bfs.adapt(timer,lock)
+
+            tb = TraceGenerator(self.TS,self.inputs.alphabet)
+            trajs = tb.get_trajectories(150)
+            for traj in trajs:
+                self.trajs.append(traj)
+            for traj in trajs:
+                self.raw_trajs.append(traj.copy())
+
+            combined_raw_traj_dict = {}
+            self.combined_raw_trajs = []
+            self.ignore_duplicate_trajectories(self.raw_trajs,combined_raw_traj_dict,self.combined_raw_trajs)
+
+            self.original_rewards = self.offset_rewards(self.baseline)
+            self.consolidate_trajectories()
+            self.generate_prefixes(self.consolidated_trajs)
+
+
+            original_interaction_trajs = copy.copy(self.trajs)
+
         self.log.close()
         self.json_exp.export_from_object(self.TS, st_reachables, self.freqs)
 

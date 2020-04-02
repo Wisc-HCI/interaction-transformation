@@ -123,14 +123,64 @@ class ModelChecker:
         init = TS.init
         curr_path = [init]
 
-        counterexamples = []
-        self.traverse_TS(curr_path,counterexamples)
+        counterexamples = [None,None,None,None,None,None,None]
+        result = [0,0,0,0,0,0,0]
+        self.traverse_TS(curr_path,counterexamples,result)
 
-        return [1,1,1],counterexamples
+        return result,counterexamples
 
-    def traverse_TS(self,curr_path,counterexamples):
+    def traverse_TS(self,curr_path,counterexamples,result):
 
+        num_counterexamples = 0
         # check the current path for property violations, add them to the counterexamples
+        #1 first ensure that when someone says goodbye, the robot will respond with a Farewell
+        if len(curr_path) > 1 and curr_path[-2].condition == "Goodbye" and curr_path[-1].micros[0]["name"] != "Farewell":
+            if counterexamples[1] is None:
+                counterexamples[1] = curr_path
+                result[1] = 1
+            num_counterexamples += 1
+
+        #2 If farewell, it must be the last possible state
+        if len(curr_path) > 3 and curr_path[-3].micros[0]["name"] == "Farewell":
+            if counterexamples[2] is None:
+                counterexamples[2] = curr_path
+                result[2] = 1
+            num_counterexamples += 1
+
+        #3 There must always be a farewell
+        if curr_path[-1].micros[0]["name"] != "Farewell" and len(curr_path[-1].out_trans) == 0:
+            if counterexamples[3] is None:
+                counterexamples[3] = curr_path
+                result[3] = 1
+            num_counterexamples += 1
+
+        #4 The until property
+        i = 1
+        while i < len(curr_path):
+            if curr_path[i].condition == "RequestInfo":
+                break
+            if curr_path[i+1].micros[0]["name"] == "DidYouSay" or curr_path[i+1].micros[0]["name"] == "AnswerQuestion":
+                if counterexamples[4] is None:
+                    counterexamples[4] = curr_path
+                    result[4] = 1
+                    num_counterexamples += 1
+                    break
+            i += 2
+
+        if len(curr_path) > 2 and curr_path[-3].micros[0]["name"] == "DidYouSay" and curr_path[-2].condition == "Affirm" and curr_path[-1].micros[0]["name"] != "AnswerQuestion":
+            if counterexamples[5] is None:
+                counterexamples[5] = curr_path
+                result[5] = 1
+            num_counterexamples += 1
+
+        if len(curr_path) > 1 and curr_path[-2].condition == "RequestInfo" and curr_path[-1].micros[0]["name"] != "DidYouSay" and curr_path[-1].micros[0]["name"] != "AnswerQuestion":
+            if counterexamples[6] is None:
+                counterexamples[6] = curr_path
+                result[6] = 1
+            num_counterexamples += 1
+
+        if num_counterexamples > 0:
+            return
 
         # grab the top state in the path
         curr_state = curr_path[-1]
@@ -147,4 +197,4 @@ class ModelChecker:
             copied_path = copy.copy(curr_path)
             copied_path.append(trans)
             copied_path.append(target_state)
-            self.traverse_TS(copied_path,counterexamples)
+            self.traverse_TS(copied_path,counterexamples,result)

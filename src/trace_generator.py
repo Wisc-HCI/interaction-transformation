@@ -25,18 +25,24 @@ class TraceGenerator:
             is_correctness = False
             score = 0.0
 
-            '''
-            basic scoring
-            '''
-            contains_listout = False
-
             while True:
                 leave_val = np.random.random()
                 if leave_val <= self.leave_early_prob:
                     is_prefix = True
                     break
 
-                selection = random.choice(list(self.inputs.keys()))
+                if traj[-1][1].type == "DidYouSay":
+                    request_info_val = np.random.random()
+                    if request_info_val > 0.4:
+                        selection = "Affirm"
+                    else:
+                        selection = random.choice(list(self.inputs.keys()))
+                else:
+                    request_info_val = np.random.random()
+                    if request_info_val > 0.6:
+                        selection = "RequestInfo"
+                    else:
+                        selection = random.choice(list(self.inputs.keys()))
                 available_trans = curr_state.out_trans
                 trans = None
                 for t in available_trans:
@@ -47,15 +53,62 @@ class TraceGenerator:
                 if trans is None:
                     break
 
-                if trans.target.micros[0]["name"] == "ListOut":
-                    contains_listout = True
                 traj.append((HumanInput(selection), Microinteraction(trans.target.micros[0]["name"], 0)))
 
-            if not is_prefix:
-                traj.append((HumanInput("Ignore"),Microinteraction("END")))
+            traj.append((HumanInput("Ignore"),Microinteraction("END")))
 
-            score = np.random.random()
-            if contains_listout:
-                score = -1
+            score = self.simple_score(traj,is_prefix)
             trajs.append(Trajectory(traj,score,is_prefix,is_correctness))
         return trajs
+
+    def simple_score(self, traj_vect, is_prefix):
+        '''
+        basic scoring
+        '''
+        # presense of states
+        contains_listout = False       # bad
+        contains_didyousay = False     # bad
+        contains_answer = False        # good
+
+        # sequences of behaviors
+        takes_initiative = False       # good -- robot takes initiative and ends interaction by itself
+
+        i = 0
+        while i < len(traj_vect):
+            # presense of states
+            if traj_vect[i][1].type == "ListOut":
+                contains_listout = True
+            if traj_vect[i][1].type == "AnswerQuestion":
+                contains_answer = True
+            if traj_vect[i][1].type == "DidYouSay":
+                contains_didyousay = True
+
+            # sequences of behaviors
+            if traj_vect[i][1].type == "Farewell" and traj_vect[i][0].type != "Goodbye":
+                takes_initiative = True
+            i += 1
+
+        # get average scores
+        scores = []
+        for i in range(0,1):
+            score_count = [0,1,0]
+            #score = np.random.normal(0.0,0.25)
+            if contains_listout:
+                score_count[0] += 2
+            if contains_answer:
+                score_count[2] += 2
+            if contains_didyousay:
+                score_count[0] += 1
+            if takes_initiative:
+                score_count[2] += 1
+            if is_prefix:
+                score_count[0] += 1
+
+            score_count[1] = max(1,min(score_count[0],score_count[2]))
+            summa = sum(score_count)
+            p = [el*1.0/summa for el in score_count]
+            score = np.random.choice([-1,0,1],p=p)
+            scores.append(score)
+        score = np.average(scores)
+
+        return score

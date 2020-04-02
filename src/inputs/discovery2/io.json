@@ -1,4 +1,4 @@
-{"inputs": {"UnsatRequest": 0, "RequestInfo": 1, "AskClarify": 2, "Affirm": 3, "Deny": 4, "Goodbye": 5, "General": 6, "Ignore": 7},
+{"inputs": {"RequestInfo": 0, "Affirm": 1, "Deny": 2, "Goodbye": 3, "General": 4, "Ignore": 5},
  "outputs": {"Greeting": {"id":0,"micro":"Greeter", "content":"false", "params":{"Greet_with_speech":"true",
                                                             "Greet_with_handshake":"false",
                                                             "Wait_for_response":"true"}

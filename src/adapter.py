@@ -426,7 +426,8 @@ class Adapter:
             if counterexample is not None:
 
                 prop_tracker[-1].append(str(counter))
-                traj = self.build_trajectory_from_nusmv(counterexample, TS, counter=counter)
+                #traj = self.build_trajectory_from_nusmv(counterexample, TS, counter=counter)
+                traj = self.build_trajectory_from_bounded_mc(counterexample,counter=counter)
 
                 if str(traj) in curr_counterexamples:
                     curr_counterexamples[str(traj)].correctness_ids.append(counter)
@@ -518,6 +519,22 @@ class Adapter:
         else:
             is_prefix=True
         trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=is_prefix, is_correctness=True, correctness_id=counter)
+        return trajectory_to_return
+
+    def build_trajectory_from_bounded_mc(self,counterexample,counter):
+        traj_vect = []
+        traj_vect.append((HumanInput("General"),Microinteraction(counterexample[0].micros[0]["name"])))
+
+        i = 1
+        while i < len(counterexample):
+            h_input = counterexample[i].condition
+            r_output = counterexample[i+1].micros[0]["name"]
+
+            traj_vect.append((HumanInput(h_input),Microinteraction(r_output)))
+
+            i+=2
+
+        trajectory_to_return = Trajectory(traj_vect, -1, is_prefix=True, is_correctness=True, correctness_id=counter)
         return trajectory_to_return
 
     def check_if_exists_within(self, little_traj, big_traj):
